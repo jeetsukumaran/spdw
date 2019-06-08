@@ -86,7 +86,6 @@ def main():
     args = parser.parse_args()
     args.output_prefix = None
     args.show_plot_on_screen = True
-    data = []
     fig, ax = plt.subplots()
     for src_idx, src_path in enumerate(args.tree_files):
         if src_path == "-":
@@ -98,11 +97,14 @@ def main():
         except AttributeError:
             src_id = "<stdin>"
         with src:
+            data = []
             for tree in dendropy.Tree.yield_from_files(
                     files=[src],
                     schema=args.input_format):
                 ages = tree.calc_node_ages(is_return_internal_node_ages_only=True)
-                coalescence_events = sorted([nd for nd in tree if not nd.is_leaf()], key=lambda nd:nd.age)
+                coalescence_events = sorted([nd for nd in tree if not nd.is_leaf()],
+                        key=lambda nd:nd.age,
+                        reverse=True)
                 num_genes = len(coalescence_events) + 1
                 # assert num_genes == len(tree.taxon_namespace)
                 previous_age = 0.0
@@ -112,6 +114,8 @@ def main():
                     coalescent_event_idx += 1
                     nd = coalescence_events.pop()
                     age = nd.age
+                    # print(age)
+                    assert nd.age >= previous_age
                     waiting_time = nd.age - previous_age
                     data.append({
                         # "src_id": "I{:03d}".format(src_idx+1),

@@ -89,7 +89,7 @@ def main():
         bd_out = open("{}.bd.trees".format(args.output_prefix), "w")
     for rep_id in range(args.num_reps):
         pop_tree = treesim.birth_death_tree(
-                birth_rate=0.01,
+                birth_rate=0.10,
                 death_rate=0.00,
                 num_extant_tips=args.num_pops,
                 gsa_ntax=100,
@@ -98,7 +98,10 @@ def main():
         # sys.stderr.write("{}\n".format(pop_tree.seed_node.age))
         for nd in pop_tree.leaf_node_iter():
             nd.num_genes = args.num_genes_per_pop
-            nd.edge.pop_size = args.pop_size
+            if nd.is_leaf():
+                nd.edge.pop_size = args.pop_size / args.num_pops
+            else:
+                nd.edge.pop_size = sum([ch.pop_size for ch in nd.child_nodes()])
         pop_tree.calc_node_ages()
         pop_tree.write(file=bd_out, schema="newick")
         ctree, ptree = treesim.constrained_kingman_tree(
