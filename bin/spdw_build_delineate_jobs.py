@@ -77,6 +77,17 @@ partition_test_types = [joint_partition_prob_test_type, marginal_partition_prob_
 
 class ColorMap(object):
 
+    contrast_pairs = [
+            ["#ffc20a", "#0c7bdc"],
+            ["#1aff1a", "#4b0092"],
+            ["#994f00", "#006cd1"],
+            ["#fefe62", "#d35fb7"],
+            ["#e1be6a", "#40b0a6"],
+            ["#005ab5", "#dc3220"],
+            ["#e66100", "#5d3a9b"],
+            ["#1a85ff", "#d41159"],
+    ]
+
     def __init__(self):
         self.label_color_map = {}
         self.color_label_map = {}
@@ -414,26 +425,30 @@ def main():
                         if nd.is_leaf():
                             is_constrained = nd.taxon.label in true_unconstrained_lineage_leaf_label_set
                             nd.annotations["constrained"] = is_constrained
-                            # if is_constrained:
-                            #     nd.annotations["!color"] = "#0072b2"
-                            # else:
-                            #     nd.annotations["!color"] = "#d55e00"
                             species_label = lineage_label_species_label_map[nd.taxon.label]
                             nd.annotations["species"] = species_label
-                            nd.annotations["!color"] = color_map(species_label)
+                            if False: #args.color_by_species:
+                                nd.annotations["!color"] = color_map(species_label)
+                            else:
+                                if is_constrained:
+                                    nd.annotations["!color"] = "#005ab5"
+                                else:
+                                    nd.annotations["!color"] = "#dc3220"
                         else:
-                            nd.annotations["!color"] = "#666666"
+                            nd.annotations["!color"] = "#aaaaaa"
                     figtree_block = [
                             'set appearance.branchLineWidth=5.0;',
-                            'set nodeShapeExternal.colourAttribute="constrained";',
-                            'set nodeShapeExternal.isShown=true;',
-                            'set nodeShapeExternal.minSize=10.0;',
-                            'set nodeShapeExternal.scaleType=Width;',
-                            'set nodeShapeExternal.shapeType=Circle;',
-                            'set nodeShapeExternal.size=10.0;',
-                            'set nodeShapeExternal.sizeAttribute="Fixed";',
-                            'set scaleBar.isShown=true;',
-                        ]
+                            'set scaleBar.isShown=false;',
+                    ]
+                    # figtree_block.extend([
+                    #         'set nodeShapeExternal.colourAttribute="constrained";',
+                    #         'set nodeShapeExternal.isShown=true;',
+                    #         'set nodeShapeExternal.minSize=10.0;',
+                    #         'set nodeShapeExternal.scaleType=Width;',
+                    #         'set nodeShapeExternal.shapeType=Circle;',
+                    #         'set nodeShapeExternal.size=10.0;',
+                    #         'set nodeShapeExternal.sizeAttribute="Fixed";',
+                    #     ])
                     figtree_block.extend([
                         'set tipLabels.colorAttribute="species";',
                         'set tipLabels.displayAttribute="species";',
@@ -443,12 +458,12 @@ def main():
                         'set tipLabels.isShown=true;',
                         'set tipLabels.significantDigits=4;',
                         ])
-                    figtree_block.extend([
-	                'set legend.attribute="constrained";',
-	                'set legend.fontSize=10.0;',
-	                'set legend.isShown=true;',
-	                'set legend.significantDigits=4;',
-                        ])
+                    # figtree_block.extend([
+	                # 'set legend.attribute="constrained";',
+	                # 'set legend.fontSize=10.0;',
+	                # 'set legend.isShown=true;',
+	                # 'set legend.significantDigits=4;',
+                    #     ])
                     figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(figtree_block))
                 lineage_tree.write(path="{}.lineages.nex".format(demo_output_prefix),
                         supplemental_blocks=[figtree_block],
