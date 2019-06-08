@@ -32,9 +32,29 @@ import dendropy
 
 import pandas as pd
 import seaborn as sns
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import spdw
+
+
+def fit_exponential(df):
+    def func(x, a, b, c):
+        return a * np.exp(-b * x) + c
+
+    x = df["coalescent_event_idx"]
+    y = df["waiting_time"]
+    yn = y + 0.2*np.random.normal(size=len(x))
+
+    popt, pcov = curve_fit(func, x, yn)
+    plt.figure()
+    plt.plot(x, yn, 'ko', label="Original Noised Data")
+    plt.plot(x, func(x, *popt), 'r-', label="Fitted Curve")
+    plt.legend()
+    plt.show()
+
 
 __prog__ = os.path.basename(__file__)
 __version__ = "1.0.0"
@@ -65,6 +85,7 @@ def main():
     args.output_prefix = None
     args.show_plot_on_screen = True
     data = []
+    fig, ax = plt.subplots()
     for src_idx, src_path in enumerate(args.tree_files):
         if src_path == "-":
             src = sys.stdin
@@ -98,16 +119,22 @@ def main():
                         "age": age,
                         "waiting_time": waiting_time,
                         })
-    df = pd.DataFrame(data)
-    kwargs = {}
-    if len(args.tree_files) > 1:
-        kwargs["hue"] = "src_id"
-    ax = sns.scatterplot(
-            x="coalescent_event_idx",
-            y="waiting_time",
-            data=df,
-            **kwargs
-            )
+            df = pd.DataFrame(data)
+            sns.distplot(
+                    df["waiting_time"],
+                    # bins=range(1, 110, 10),
+                    ax=ax,
+                    kde=True)
+    # kwargs = {}
+    # if len(args.tree_files) > 1:
+    #     kwargs["hue"] = "src_id"
+    # ax = sns.scatterplot(
+    #         x="coalescent_event_idx",
+    #         y="waiting_time",
+    #         data=df,
+    #         **kwargs
+    #         )
+    # ax = sns.kdeplot(df["waiting_time"], **kwargs)
     spdw.render_output(args, "Age")
 
 if __name__ == '__main__':
