@@ -96,12 +96,12 @@ def main():
                 rng=rng,
                 )
         # sys.stderr.write("{}\n".format(pop_tree.seed_node.age))
-        for nd in pop_tree.leaf_node_iter():
-            nd.num_genes = args.num_genes_per_pop
+        for nd in pop_tree.postorder_node_iter():
             if nd.is_leaf():
+                nd.num_genes = args.num_genes_per_pop
                 nd.edge.pop_size = args.pop_size / args.num_pops
             else:
-                nd.edge.pop_size = sum([ch.pop_size for ch in nd.child_nodes()])
+                nd.edge.pop_size = sum([ch.edge.pop_size for ch in nd.child_nodes()])
         pop_tree.calc_node_ages()
         pop_tree.write(file=bd_out, schema="newick")
         ctree, ptree = treesim.constrained_kingman_tree(
