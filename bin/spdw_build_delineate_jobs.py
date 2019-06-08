@@ -462,7 +462,7 @@ def main():
             job_kwargs["speciation_completion_rate"] = "--speciation-completion-rate {}".format(true_speciation_completion_rate)
         else:
             job_kwargs["speciation_completion_rate"] = ""
-        job_kwargs["post_analysis_performance_assessment_command"] = "python3 {}/spwd_evaluate_delineate_jobs.py".format(SCRIPT_DIR)
+        job_kwargs["post_analysis_performance_assessment_command"] = "python3 {}/spdw_evaluate_delineate_jobs.py".format(SCRIPT_DIR)
         job_commands.append(species_partition_estimation_job_template.format(**job_kwargs))
         job_kwargs["joint_performance_assessment_results_filepath"] = job_prefix + ".joint-partition-est-perf.tsv"
         job_commands.append(species_partition_estimation_joint_probability_analysis_template.format(**job_kwargs))
