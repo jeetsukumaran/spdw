@@ -437,11 +437,11 @@ def main():
                                     nd.annotations["!color"] = unconstrained_color
                         else:
                             nd.annotations["!color"] = "#aaaaaa"
-                    figtree_block = [
+                    lineage_tree_figtree_block = [
                             'set appearance.branchLineWidth=5.0;',
                             'set scaleBar.isShown=false;',
                     ]
-                    # figtree_block.extend([
+                    # lineage_tree_figtree_block.extend([
                     #         'set nodeShapeExternal.colourAttribute="constrained";',
                     #         'set nodeShapeExternal.isShown=true;',
                     #         'set nodeShapeExternal.minSize=10.0;',
@@ -450,7 +450,7 @@ def main():
                     #         'set nodeShapeExternal.size=10.0;',
                     #         'set nodeShapeExternal.sizeAttribute="Fixed";',
                     #     ])
-                    figtree_block.extend([
+                    lineage_tree_figtree_block.extend([
                         'set tipLabels.colorAttribute="species";',
                         'set tipLabels.displayAttribute="species";',
                         'set tipLabels.fontName="sansserif";',
@@ -459,15 +459,48 @@ def main():
                         'set tipLabels.isShown=true;',
                         'set tipLabels.significantDigits=4;',
                         ])
-                    # figtree_block.extend([
+                    # lineage_tree_figtree_block.extend([
 	                # 'set legend.attribute="constrained";',
 	                # 'set legend.fontSize=10.0;',
 	                # 'set legend.isShown=true;',
 	                # 'set legend.significantDigits=4;',
                     #     ])
-                    figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(figtree_block))
+                    lineage_tree_figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(lineage_tree_figtree_block))
                 lineage_tree.write(path="{}.lineages.nex".format(demo_output_prefix),
-                        supplemental_blocks=[figtree_block],
+                        supplemental_blocks=[lineage_tree_figtree_block],
+                        schema="nexus")
+
+                orthospecies_tree_figtree_block = [
+                        'set appearance.branchLineWidth=5.0;',
+                        'set scaleBar.isShown=false;',
+                ]
+                # orthospecies_tree_figtree_block.extend([
+                #         'set nodeShapeExternal.colourAttribute="constrained";',
+                #         'set nodeShapeExternal.isShown=true;',
+                #         'set nodeShapeExternal.minSize=10.0;',
+                #         'set nodeShapeExternal.scaleType=Width;',
+                #         'set nodeShapeExternal.shapeType=Circle;',
+                #         'set nodeShapeExternal.size=10.0;',
+                #         'set nodeShapeExternal.sizeAttribute="Fixed";',
+                #     ])
+                orthospecies_tree_figtree_block.extend([
+                    # 'set tipLabels.colorAttribute="Name";',
+                    'set tipLabels.displayAttribute="Name";',
+                    'set tipLabels.fontName="sansserif";',
+                    'set tipLabels.fontSize=30;',
+                    'set tipLabels.fontStyle=0;',
+                    'set tipLabels.isShown=true;',
+                    'set tipLabels.significantDigits=4;',
+                    ])
+                # orthospecies_tree_figtree_block.extend([
+                    # 'set legend.attribute="constrained";',
+                    # 'set legend.fontSize=10.0;',
+                    # 'set legend.isShown=true;',
+                    # 'set legend.significantDigits=4;',
+                #     ])
+                orthospecies_tree_figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(orthospecies_tree_figtree_block))
+                orthospecies_tree.write(path="{}.species.nex".format(demo_output_prefix),
+                        supplemental_blocks=[orthospecies_tree_figtree_block],
                         schema="nexus")
 
             # for post analysis assessment (not used by the inference program)
