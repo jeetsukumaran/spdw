@@ -38,6 +38,23 @@ __description__ = __doc__
 __author__ = 'Jeet Sukumaran'
 __copyright__ = 'Copyright (C) 2019 Jeet Sukumaran.'
 
+def generate_pop_tree(args, rng):
+    pop_tree = treesim.birth_death_tree(
+            birth_rate=args.birth_rate,
+            death_rate=args.death_rate,
+            num_extant_tips=args.num_pops,
+            gsa_ntax=args.num_pops * 10,
+            rng=rng,
+            )
+    # sys.stderr.write("{}\n".format(pop_tree.seed_node.age))
+    for nd in pop_tree.postorder_node_iter():
+        if nd.is_leaf():
+            nd.num_genes = args.num_genes_per_pop
+            nd.edge.pop_size = args.pop_size / args.num_pops
+        else:
+            nd.edge.pop_size = sum([ch.edge.pop_size for ch in nd.child_nodes()])
+    return pop_tree
+
 def main():
     """
     Main CLI handler.
@@ -51,25 +68,45 @@ def main():
             type=int,
             default=10,
             metavar="NUM-GENES-PER-POP",
-            help="Number of samples per population (default=%(default)s)")
+            help="Number of samples per population (default=%(default)s).")
     parser.add_argument("-p", "--num-pops",
             action="store",
             type=int,
             default=10,
             metavar="NUM-POPS",
-            help="Number of populations (default=%(default)s)")
+            help="Number of populations (default=%(default)s).")
     parser.add_argument("-N", "--pop-size", "--population-size",
             action="store",
             type=float,
             default=1.0,
             metavar="POP-SIZE",
-            help="Population size (default=%(default)s)")
-    parser.add_argument("--num-reps",
+            help="Population size (default=%(default)s).")
+    parser.add_argument("--birth-rate",
+            action="store",
+            type=float,
+            default=0.10,
+            help="Birth-death process birth rate (default=%(default)s).")
+    parser.add_argument("--death-rate",
+            action="store",
+            type=float,
+            default=0.00,
+            help="Birth-death process birth rate (default=%(default)s).")
+    parser.add_argument("--num-pop-tree-reps",
+            action="store",
+            type=int,
+            default=1,
+            metavar="#",
+            help="Number of population tree replicates (default=%(default)s).")
+    parser.add_argument("--num-reps-per-pop-tree",
             action="store",
             type=int,
             default=10,
-            metavar="NUM-REPS",
-            help="Number of replicates (default=%(default)s)")
+            metavar="#",
+            help="Number of coalescent tree draws from the same population tree (default=%(default)s).")
+    parser.add_argument("--write-pop-trees",
+            action="store_true",
+            default=False,
+            help="Save population trees.")
     parser.add_argument("-z", "--random-seed",
             type=int,
             default=None,
@@ -81,35 +118,23 @@ def main():
         args.random_seed = random.randint(0, sys.maxsize)
     rng = random.Random(args.random_seed)
     tns = dendropy.TaxonNamespace()
+    bd_out = None
     if args.output_prefix == "-":
         coal_out = sys.stdout
         bd_out = sys.stderr
     else:
         coal_out = open("{}.coal.trees".format(args.output_prefix), "w")
-        bd_out = open("{}.bd.trees".format(args.output_prefix), "w")
-    for rep_id in range(args.num_reps):
-        pop_tree = treesim.birth_death_tree(
-                birth_rate=0.10,
-                death_rate=0.00,
-                num_extant_tips=args.num_pops,
-                gsa_ntax=100,
-                rng=rng,
-                )
-        # sys.stderr.write("{}\n".format(pop_tree.seed_node.age))
-        for nd in pop_tree.postorder_node_iter():
-            if nd.is_leaf():
-                nd.num_genes = args.num_genes_per_pop
-                nd.edge.pop_size = args.pop_size / args.num_pops
-            else:
-                nd.edge.pop_size = sum([ch.edge.pop_size for ch in nd.child_nodes()])
-        pop_tree.calc_node_ages()
-        pop_tree.write(file=bd_out, schema="newick")
-        ctree, ptree = treesim.constrained_kingman_tree(
-                pop_tree=pop_tree,
-                rng=rng)
-        ctree.write(file=coal_out, schema="newick")
+        if args.write_pop_trees:
+            bd_out = open("{}.bd.trees".format(args.output_prefix), "w")
+    for pop_tree_id in range(args.num_pop_tree_reps):
+        pop_tree = generate_pop_tree(args, rng)
+        if args.write_pop_trees:
+            pop_tree.write(file=bd_out, schema="newick")
+        for rep_id in range(args.num_reps_per_pop_tree):
+            ctree, ptree = treesim.constrained_kingman_tree(
+                    pop_tree=pop_tree,
+                    rng=rng)
+            ctree.write(file=coal_out, schema="newick")
 
 if __name__ == '__main__':
     main()
-
-
