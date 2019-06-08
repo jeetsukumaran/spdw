@@ -45,11 +45,7 @@ def main():
 
     parser = argparse.ArgumentParser(description=__description__)
     parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
-    parser.add_argument("-F", "--output-format",
-            type=str,
-            default="newick",
-            choices=["nexus", "newick"],
-            help="Output data format (default='%(default)s')")
+    parser.add_argument("output_prefix")
     parser.add_argument("-k", "--num-tips",
             action="store",
             type=int,
@@ -80,20 +76,16 @@ def main():
     rng = random.Random(args.random_seed)
     tns = dendropy.TaxonNamespace(["G{:03d}".format(i+1) for i in range(args.num_tips)])
     trees = dendropy.TreeList(taxon_namespace=tns)
-    out = sys.stdout
+    if args.output_prefix == "-":
+        coal_out = sys.stdout
+    else:
+        coal_out = open("{}.coal.trees".format(args.output_prefix), "w")
     for rep_id in range(args.num_reps):
         tree = treesim.pure_kingman_tree(
                 taxon_namespace=tns,
                 pop_size=args.pop_size,
                 rng=rng)
-        if args.output_format == "newick":
-            tree.write(file=out,
-                    schema=args.output_format)
-        else:
-            trees.append(tree)
-    if args.output_format == "nexus":
-        trees.write(file=out,
-                schema=args.output_format,)
+        tree.write(file=coal_out, schema="newick")
 
 if __name__ == '__main__':
     main()

@@ -21,7 +21,7 @@
 ###############################################################################
 
 """
-Species Delimitation Workshop: Simulate trees under Kingman's neutral coalescent.
+Species Delimitation Workshop: Simulate trees under the censored coalescent structured by a birth-death process.
 """
 
 import sys
@@ -45,12 +45,8 @@ def main():
 
     parser = argparse.ArgumentParser(description=__description__)
     parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
-    parser.add_argument("-F", "--output-format",
-            type=str,
-            default="newick",
-            choices=["nexus", "newick"],
-            help="Output data format (default='%(default)s')")
-    parser.add_argument("-", "--num-genes-per-pop",
+    parser.add_argument("output_prefix")
+    parser.add_argument("-k", "--num-genes-per-pop",
             action="store",
             type=int,
             default=10,
@@ -85,8 +81,12 @@ def main():
         args.random_seed = random.randint(0, sys.maxsize)
     rng = random.Random(args.random_seed)
     tns = dendropy.TaxonNamespace()
-    trees = dendropy.TreeList(taxon_namespace=tns)
-    out = sys.stdout
+    if args.output_prefix == "-":
+        coal_out = sys.stdout
+        bd_out = sys.stderr
+    else:
+        coal_out = open("{}.coal.trees".format(args.output_prefix), "w")
+        bd_out = open("{}.bd.trees".format(args.output_prefix), "w")
     for rep_id in range(args.num_reps):
         pop_tree = treesim.birth_death_tree(
                 birth_rate=0.01,
@@ -95,21 +95,16 @@ def main():
                 gsa_ntax=100,
                 rng=rng,
                 )
-        pop_tree.calc_node_ages()
-        sys.stderr.write("{}\n".format(pop_tree.seed_node.age))
+        # sys.stderr.write("{}\n".format(pop_tree.seed_node.age))
         for nd in pop_tree.leaf_node_iter():
             nd.num_genes = args.num_genes_per_pop
+            nd.edge.pop_size = args.pop_size
+        pop_tree.calc_node_ages()
+        pop_tree.write(file=bd_out, schema="newick")
         ctree, ptree = treesim.constrained_kingman_tree(
                 pop_tree=pop_tree,
                 rng=rng)
-        if args.output_format == "newick":
-            ctree.write(file=out,
-                    schema=args.output_format)
-        else:
-            trees.append(ctree)
-    if args.output_format == "nexus":
-        trees.write(file=out,
-                schema=args.output_format,)
+        ctree.write(file=coal_out, schema="newick")
 
 if __name__ == '__main__':
     main()
