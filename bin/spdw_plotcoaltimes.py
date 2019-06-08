@@ -34,6 +34,8 @@ import pandas as pd
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy
+from scipy import stats
 from scipy.optimize import curve_fit
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -120,14 +122,25 @@ def main():
                         "waiting_time": waiting_time,
                         })
             df = pd.DataFrame(data)
-            sns.distplot(
+
+            # sns.distplot(
+            #         df["waiting_time"],
+            #         # bins=range(1, 110, 10),
+            #         ax=ax,
+            #         hist=False,
+            #         kde=True,
+            #         # fit=stats.expon,
+            #         label=src_id,
+            #         )
+
+            sns.kdeplot(
                     df["waiting_time"],
                     # bins=range(1, 110, 10),
                     ax=ax,
-                    hist=False,
-                    kde=True,
+                    # bw=200,
                     label=src_id,
                     )
+
     # kwargs = {}
     # if len(args.tree_files) > 1:
     #     kwargs["hue"] = "src_id"
