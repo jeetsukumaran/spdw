@@ -50,19 +50,25 @@ def main():
             default="newick",
             choices=["nexus", "newick"],
             help="Output data format (default='%(default)s')")
-    parser.add_argument("-k", "--num-tips",
+    parser.add_argument("-", "--num-genes-per-pop",
             action="store",
             type=int,
             default=10,
-            metavar="NUM-TIPS",
-            help="Number of samples (default=%(default)s)")
-    parser.add_argument("-p", "--pop-size", "--population-size",
+            metavar="NUM-GENES-PER-POP",
+            help="Number of samples per population (default=%(default)s)")
+    parser.add_argument("-p", "--num-pops",
+            action="store",
+            type=int,
+            default=10,
+            metavar="NUM-POPS",
+            help="Number of populations (default=%(default)s)")
+    parser.add_argument("-N", "--pop-size", "--population-size",
             action="store",
             type=float,
             default=1.0,
             metavar="POP-SIZE",
             help="Population size (default=%(default)s)")
-    parser.add_argument("-n", "--num-reps",
+    parser.add_argument("--num-reps",
             action="store",
             type=int,
             default=10,
@@ -78,19 +84,29 @@ def main():
     if args.random_seed is None:
         args.random_seed = random.randint(0, sys.maxsize)
     rng = random.Random(args.random_seed)
-    tns = dendropy.TaxonNamespace(["G{:03d}".format(i+1) for i in range(args.num_tips)])
+    tns = dendropy.TaxonNamespace()
     trees = dendropy.TreeList(taxon_namespace=tns)
     out = sys.stdout
     for rep_id in range(args.num_reps):
-        tree = treesim.pure_kingman_tree(
-                taxon_namespace=tns,
-                pop_size=args.pop_size,
+        pop_tree = treesim.birth_death_tree(
+                birth_rate=0.01,
+                death_rate=0.00,
+                num_extant_tips=args.num_pops,
+                gsa_ntax=100,
+                rng=rng,
+                )
+        pop_tree.calc_node_ages()
+        sys.stderr.write("{}\n".format(pop_tree.seed_node.age))
+        for nd in pop_tree.leaf_node_iter():
+            nd.num_genes = args.num_genes_per_pop
+        ctree, ptree = treesim.constrained_kingman_tree(
+                pop_tree=pop_tree,
                 rng=rng)
         if args.output_format == "newick":
-            tree.write(file=out,
+            ctree.write(file=out,
                     schema=args.output_format)
         else:
-            trees.append(tree)
+            trees.append(ctree)
     if args.output_format == "nexus":
         trees.write(file=out,
                 schema=args.output_format,)
