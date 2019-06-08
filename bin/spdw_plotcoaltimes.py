@@ -124,7 +124,10 @@ def main():
                     df["waiting_time"],
                     # bins=range(1, 110, 10),
                     ax=ax,
-                    kde=True)
+                    hist=False,
+                    kde=True,
+                    label=src_id,
+                    )
     # kwargs = {}
     # if len(args.tree_files) > 1:
     #     kwargs["hue"] = "src_id"
@@ -135,6 +138,7 @@ def main():
     #         **kwargs
     #         )
     # ax = sns.kdeplot(df["waiting_time"], **kwargs)
+    fig.legend()
     spdw.render_output(args, "Age")
 
 if __name__ == '__main__':
