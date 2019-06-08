@@ -47,7 +47,7 @@ def main():
     parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
     parser.add_argument("-F", "--output-format",
             type=str,
-            default="nexus",
+            default="newick",
             choices=["nexus", "newick"],
             help="Output data format (default='%(default)s')")
     parser.add_argument("-k", "--num-tips",
@@ -93,7 +93,7 @@ def main():
             trees.append(tree)
     if args.output_format == "nexus":
         trees.write(file=out,
-                schema=args.output_format)
+                schema=args.output_format,)
 
 if __name__ == '__main__':
     main()
