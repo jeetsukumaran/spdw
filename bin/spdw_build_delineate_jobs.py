@@ -418,6 +418,7 @@ def main():
 
             # extra files for demo
             if args.write_extra_for_demo:
+                constrained_color, unconstrained_color = ColorMap.contrast_pairs[0]
                 demo_output_prefix = "{}.{:04d}.demo".format(output_prefix, tree_idx+1)
                 true_unconstrained_lineage_leaf_label_set = set(true_unconstrained_lineage_leaf_labels)
                 if args.test_type in partition_test_types:
@@ -431,9 +432,9 @@ def main():
                                 nd.annotations["!color"] = color_map(species_label)
                             else:
                                 if is_constrained:
-                                    nd.annotations["!color"] = "#005ab5"
+                                    nd.annotations["!color"] = constrained_color
                                 else:
-                                    nd.annotations["!color"] = "#dc3220"
+                                    nd.annotations["!color"] = unconstrained_color
                         else:
                             nd.annotations["!color"] = "#aaaaaa"
                     figtree_block = [
