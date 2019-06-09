@@ -52,8 +52,8 @@ BPP_TEMPLATE = """\
 * speciesdelimitation = 0 * fixed species tree
 * speciesdelimitation = 1 0 2    * species delimitation rjMCMC algorithm0 and finetune(e)
   speciesdelimitation = 1 1 2 1 * species delimitation rjMCMC algorithm1 finetune (a m)
-          speciestree = 0        * species tree NNI/SPR
-*        speciestree = 1  0.4 0.2 0.1   * speciestree pSlider ExpandRatio ShrinkRatio
+*         speciestree = 0        * species tree NNI/SPR
+         speciestree = 1  0.4 0.2 0.1   * speciestree pSlider ExpandRatio ShrinkRatio
 
 
      speciesmodelprior = 1         * 0: uniform labeled histories; 1:uniform rooted trees
