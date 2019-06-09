@@ -133,7 +133,7 @@ def main():
     data_options = parser.add_argument_group("Data Options")
     data_options.add_argument("--population-size",
             type=int,
-            default=10000,
+            default=1.0,
             help="Population size (default: %(default)s).")
     data_options.add_argument("--num-individuals-per-population",
             type=int,
