@@ -80,10 +80,26 @@ def calculate_bpp_full_species_tree(
             nd.child_labels = child_labels
             nd.clear_child_nodes()
             guide_tree_edge = guide_tree.bipartition_edge_map[nd.edge.bipartition]
-            guide_tree_edge.collapse(adjust_collapsed_head_children_edge_lengths=True)
+            guide_tree_edge.head_node.is_collapsed = True
         else:
             for sub_nd in nd.child_node_iter():
                 nodes_to_process.append(sub_nd)
+    collapsed_nodes = set()
+    for gnd in guide_tree.postorder_node_iter():
+        if getattr(gnd, "is_collapsed", False):
+            len_to_add = 0.0
+            desc_nd = gnd
+            while True:
+                try:
+                    desc_nd = desc_nd._child_nodes[0]
+                    len_to_add += desc_nd.edge.length
+                except IndexError:
+                    break
+            gnd.edge.length += len_to_add
+            for xnd in gnd.postorder_iter():
+                if xnd is gnd:
+                    continue
+                xnd.edge.length = 0.0
     for nd in tree1.leaf_node_iter():
         nd.taxon = tree1.taxon_namespace.require_taxon(label=nd.label)
         nd.label = None
