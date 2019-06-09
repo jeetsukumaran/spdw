@@ -95,7 +95,7 @@ def generate_contained_trees(
     assert len(containing_tree.taxon_namespace) > 0
     for sp_idx, sp_tax in enumerate(containing_tree.taxon_namespace):
         for gidx in range(num_individuals_per_population):
-            glabel = "{sp}_{ind}^{sp}".format(sp=sp_tax.label, ind=gidx+1)
+            glabel = "{sp}_{ind}^{sp}_{ind}".format(sp=sp_tax.label, ind=gidx+1)
             # glabel = "{sp}^{sp}_{ind}".format(sp=sp_tax.label, ind=gidx+1)
             g = contained_taxon_namespace.require_taxon(label=glabel)
             g.population_label = sp_tax.label
@@ -218,6 +218,8 @@ def main():
         f = open(imap_filepath, "w")
         for taxon in gene_trees.taxon_namespace:
             f.write("{}    {}\n".format(taxon.label.split("^")[1], taxon.population_label))
+            # f.write("{}    {}\n".format(taxon.label.split("^")[0], taxon.population_label))
+            # f.write("{}    {}\n".format(taxon.label, taxon.population_label))
         f.write("\n")
 
         d0 = sg.generate(gene_trees)
