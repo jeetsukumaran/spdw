@@ -169,6 +169,7 @@ def main():
     _log("Random seed: {}".format(random_seed))
 
     sg = seqgen.SeqGen()
+    sg.seq_len = args.num_characters_per_locus
     sg.scale_branch_lengths = args.mutation_rate_per_site
 
     if "-" in args.source_trees:
@@ -253,7 +254,7 @@ def main():
             tau_prior_mean = source_tree.seed_node.age
         else:
             # tau_prior_mean = source_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
-            tau_prior_mean = source_tree.seed_node.age * args.mutation_rate_per_site * 0.01
+            tau_prior_mean = source_tree.seed_node.age * args.mutation_rate_per_site * (1.0 / (args.num_loci_per_individual * args.num_characters_per_locus))
             # tau_prior_mean = source_tree.seed_node.age / 100000
         tau_prior_a = 3.0
         tau_prior_b = tau_prior_mean * (tau_prior_a - 1)
