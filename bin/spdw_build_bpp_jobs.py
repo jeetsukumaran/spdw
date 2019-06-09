@@ -46,8 +46,12 @@ BPP_TEMPLATE = """\
        outfile = {out_filepath}
       mcmcfile = {mcmc_filepath}
 
-speciesdelimitation = 1 0 2.5    * speciesdelimitation algorithm0 and finetune(e)
-    speciestree = 0
+* speciesdelimitation = 0 * fixed species tree
+* speciesdelimitation = 1 0 2    * species delimitation rjMCMC algorithm0 and finetune(e)
+  speciesdelimitation = 1 1 2 1 * species delimitation rjMCMC algorithm1 finetune (a m)
+          speciestree = 0        * species tree NNI/SPR
+*        speciestree = 1  0.4 0.2 0.1   * speciestree pSlider ExpandRatio ShrinkRatio
+
 
      speciesmodelprior = 1         * 0: uniform labeled histories; 1:uniform rooted trees
 
@@ -61,11 +65,9 @@ speciesdelimitation = 1 0 2.5    * speciesdelimitation algorithm0 and finetune(e
      cleandata = 0    * remove sites with ambiguity data (1:yes, 0:no)?
 
     thetaprior = {theta_prior_a} {theta_prior_b}   # invgamma(a, b) for theta, mean = {theta_prior_mean}
-      tauprior = {tau_prior_a}   {tau_prior_b}       # invgamma(a, b) for root tau & Dirichlet(a) for other tau's, mean = {tau_prior_mean}
+      tauprior = {tau_prior_a}   {tau_prior_b}       # invgamma(a, b) for root tau & Dirichlet(a) for other tau's, mean = {tau_prior_mean}; root age (raw, unscaled) = {root_age}
 
-*       finetune = 0: 5 0.0005 0.002  0.0005 0.5 0.2 1.0  # auto (0 or 1): finetune for GBtj, GBspr, theta, tau, mix, locusrate, seqerr
-
-       finetune = 1: .01 .01 .01 .01 .01 .01 .01 .01  # auto (0 or 1): finetune for GBtj, GBspr, theta, tau, mix, locusrate, seqerr
+      finetune =  1: 3 0.003 0.002 0.00002 0.005 0.9 0.001 0.001 # finetune for GBtj, GBspr, theta, tau, mix
 
          print = 1 0 0 0   * MCMC samples, locusrate, heredityscalars Genetrees
         burnin = 4000
@@ -247,7 +249,9 @@ def main():
         if args.no_scale_tree_by_mutation_rate:
             tau_prior_mean = source_tree.seed_node.age
         else:
-            tau_prior_mean = source_tree.seed_node.age * args.mutation_rate_per_site
+            # tau_prior_mean = source_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
+            tau_prior_mean = source_tree.seed_node.age * args.mutation_rate_per_site * 0.01
+            # tau_prior_mean = source_tree.seed_node.age / 100000
         tau_prior_a = 3.0
         tau_prior_b = tau_prior_mean * (tau_prior_a - 1)
 
@@ -289,6 +293,7 @@ def main():
                 tau_prior_a=tau_prior_a,
                 tau_prior_b=tau_prior_b,
                 num_loci=args.num_loci_per_individual,
+                root_age=source_tree.seed_node.age
                 )
         bpp_ctl_filepath = "{}.input.bpp.ctl".format(job_title)
         f = open(bpp_ctl_filepath, "w")
