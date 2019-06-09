@@ -106,7 +106,7 @@ def main():
             action="store",
             default="bpp_a01",
             help="Prefix for output files (default=%(default)s).")
-    parser.add_argument("-t", "--minimum_species_probability_threshold",
+    parser.add_argument("-p", "--minimum_species_probability_threshold",
             action="store",
             type=float,
             default=0.96,
