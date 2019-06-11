@@ -81,7 +81,7 @@ def main():
             type=str,
             default="newick",
             choices=["nexus", "newick"],
-            help="Output data format (default='%(default)s')")
+            help="Input data format (default='%(default)s')")
 
     args = parser.parse_args()
     args.output_prefix = None
