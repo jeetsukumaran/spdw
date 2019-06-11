@@ -17,7 +17,7 @@ LOGPATH = os.path.expandvars(os.path.expanduser(os.path.join("~", ".delineate-pe
 START_DATETIME = datetime.datetime.now()
 
 ### Example invocation:
-# python ../../../bin/spdw_build_delineate_jobs.py -t test1 -n 1 --num-extant-lineages 20 joint-partition-probabilities --constrain-partitions topological --max-unconstrained-leaves 5
+# python ../../../bin/spdw-build-delineate-jobs.py -t test1 -n 1 --num-extant-lineages 20 joint-partition-probabilities --constrain-partitions topological --max-unconstrained-leaves 5
 
 template = """\
 #! /bin/bash
@@ -462,7 +462,7 @@ def main():
             job_kwargs["speciation_completion_rate"] = "--speciation-completion-rate {}".format(true_speciation_completion_rate)
         else:
             job_kwargs["speciation_completion_rate"] = ""
-        job_kwargs["post_analysis_performance_assessment_command"] = "python3 {}/spdw_evaluate_delineate_jobs.py".format(SCRIPT_DIR)
+        job_kwargs["post_analysis_performance_assessment_command"] = "python3 {}/spdw-evaluate-delineate-jobs.py".format(SCRIPT_DIR)
         job_commands.append(species_partition_estimation_job_template.format(**job_kwargs))
         job_kwargs["joint_performance_assessment_results_filepath"] = job_prefix + ".joint-partition-est-perf.tsv"
         job_commands.append(species_partition_estimation_joint_probability_analysis_template.format(**job_kwargs))

@@ -37,8 +37,8 @@ sites, less than 1 difference per kb. A sensible diffuse prior is then ''thetapr
 with mean 0.001.
 """
 
-# p ../../../bin/spdw_build_delineate_jobs.py --splitting-rate 0.1 --speciation-completion-rate 1 -t delineate -n 1 --num-extant-lineages 5 --constrain-partitions random --max-unconstrained-leaves 2 --write-extra
-# p ../../../bin/spdw_build_bpp_jobs.py --num-loci 1 --num-ind 2 --num-char 500 delineate_spr1.000_.0001.demo.lineages.nex
+# p ../../../bin/spdw-build-delineate-jobs.py --splitting-rate 0.1 --speciation-completion-rate 1 -t delineate -n 1 --num-extant-lineages 5 --constrain-partitions random --max-unconstrained-leaves 2 --write-extra
+# p ../../../bin/spdw-build-bpp-jobs.py --num-loci 1 --num-ind 2 --num-char 500 delineate_spr1.000_.0001.demo.lineages.nex
 
 BPP_TEMPLATE = """\
 
