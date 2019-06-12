@@ -91,7 +91,7 @@ def main():
         sys.exit("Please specify path(s) to genealogy tree file(s)")
     sg = seqgen.SeqGen()
     sg.seq_len = args.num_characters_per_locus
-    sg.scale_branch_lengths = args.mutation_rate_per_site
+    sg.scale_branch_lens = args.mutation_rate_per_site
     gene_trees = dendropy.TreeList()
     for src_idx, src_path in enumerate(args.tree_files):
         if src_path == "-":

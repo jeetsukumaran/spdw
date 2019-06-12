@@ -12,6 +12,7 @@ import random
 import argparse
 from dendropy.model import reconcile
 from dendropy.interop import seqgen
+from dendropy.calculate import popgenstat
 import dendropy
 
 def _log(msg):
@@ -154,7 +155,8 @@ def main():
             help="Number of characters sampled per locus (default: %(default)s).")
     data_options.add_argument("--mutation-rate-per-site",
             type=float,
-            default=0.00001,
+            # default=0.00001,
+            default=1e-8,
             help="Per-site mutation rate (default: %(default)s).")
     parser.add_argument("--no-scale-tree-by-mutation-rate",
             action="store_true",
@@ -170,7 +172,7 @@ def main():
 
     sg = seqgen.SeqGen()
     sg.seq_len = args.num_characters_per_locus
-    sg.scale_branch_lengths = args.mutation_rate_per_site
+    sg.scale_branch_lens = args.mutation_rate_per_site
 
     if "-" in args.source_trees:
         filepaths = sys.stdin.read().split("\n")
@@ -227,7 +229,11 @@ def main():
         d0 = sg.generate(gene_trees)
         chars_filepath = "{}.input.chars.txt".format(job_title)
         f = open(chars_filepath, "w")
-        for cm in d0.char_matrices:
+        for cm_idx, cm in enumerate(d0.char_matrices):
+            sys.stderr.write("Locus {}: pi = {}, Tajima's D = {}\n".format(
+                cm_idx+1,
+                popgenstat.nucleotide_diversity(cm),
+                popgenstat.tajimas_d(cm)))
             cm.write(file=f, schema="phylip")
             f.write("\n")
 
