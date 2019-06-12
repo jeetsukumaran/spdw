@@ -34,6 +34,7 @@ setup(
         "bin/spdw-build-fsc26-run.py",
         "bin/spdw-evaluate-delineate-jobs.py",
         "bin/spdw-extract-bpp-a10-tree.py",
+        "bin/spdw-fix-bpp-traces.py",
         "bin/spdw-gen-seqs.py",
         "bin/spdw-plotcoaltimes.py",
         "bin/spdw-plot-invgamma.py",
