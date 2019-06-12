@@ -123,7 +123,7 @@ def main():
     parser.add_argument("source_trees",
             metavar="SOURCE_TREEFILE [SOURCE_TREEFILE [SOURCE_TREEFILE]]",
             nargs="+",
-            help="Path to source of tree files. Specify '-' to read from standard input.")
+            help="Path to containing tree files. Specify '-' to read from standard input.")
     parser.add_argument("-f", "--input-format",
             default="nexus",
             dest="schema",
@@ -184,16 +184,12 @@ def main():
         job_title = "{}_{:05d}".format(args.title, idx+1)
         manifest_entry = collections.OrderedDict()
         _log("{} of {}: {}: {}".format(idx+1, len(filepaths), job_title, filepath))
-        try:
-            source_tree = dendropy.Tree.get(
-                    path=filepath,
-                    schema=args.schema,
-                    extract_comment_metadata=True,
-                    preserve_underscores=True,
-                    )
-        except (OSError, dendropy.DataError):
-            _log("Skipping failed file: {}".format(filepath))
-            continue
+        source_tree = dendropy.Tree.get(
+                path=filepath,
+                schema=args.schema,
+                extract_comment_metadata=True,
+                preserve_underscores=True,
+                )
 
         manifest_entry["speciation_initiation_from_orthospecies_rate"] = try_to_coerce_to_float(source_tree.annotations["speciation_initiation_from_orthospecies_rate"].value)
         manifest_entry["speciation_initiation_from_incipient_species_rate"] = try_to_coerce_to_float(source_tree.annotations["speciation_initiation_from_incipient_species_rate"].value)
