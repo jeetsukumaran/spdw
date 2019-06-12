@@ -74,8 +74,8 @@ def main():
             help="Number of replicates (default: %(default)s).")
     parser.add_argument("-F", "--output-format",
             type=str,
-            default="phylip",
-            choices=["nexus", "phylip", "fasta"],
+            default="bpp",
+            choices=["bpp", "nexus", "phylip"],
             help="Input data format (default='%(default)s')")
     parser.add_argument("--concatenate",
             action="store_true",
@@ -108,17 +108,26 @@ def main():
                     file=src,
                     schema=args.input_format,
                     rooting="force-rooted")
+    if args.output_format == "bpp":
+        for t in gene_trees.taxon_namespace:
+            t.label = "^{}".format(t.label)
     for rep_idx in range(args.num_replicates):
         d0 = sg.generate(gene_trees)
         chars_filepath = "{}.{:03d}.chars".format(args.output_prefix, rep_idx+1)
         if args.output_format == "nexus":
             chars_filepath += ".nex"
             d0.write(path=chars_filepath, schema="nexus")
+        elif args.output_format == "phylip":
+            chars_filepath += ".phylip"
+            d0.write(path=chars_filepath, schema="phylip")
+        elif args.output_format == "bpp":
+            chars_filepath += ".txt"
+            f = open(chars_filepath, "w")
+            for cm in d0.char_matrices:
+                cm.write(file=f, schema="phylip")
+                f.write("\n")
         else:
             raise NotImplementedError
-        # for cm in d0.char_matrices:
-        #     d0.write(file=f, schema="phylip")
-        #     f.write("\n")
 
 if __name__ == '__main__':
     main()

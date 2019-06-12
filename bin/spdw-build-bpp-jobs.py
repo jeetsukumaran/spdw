@@ -232,7 +232,7 @@ def main():
         chars_filepath = "{}.input.chars.txt".format(job_title)
         f = open(chars_filepath, "w")
         for cm in d0.char_matrices:
-            d0.write(file=f, schema="phylip")
+            cm.write(file=f, schema="phylip")
             f.write("\n")
 
         out_filepath = "{}.results.out.txt".format(job_title)
