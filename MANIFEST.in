@@ -1,0 +1,9 @@
+include ez_setup.py
+include README.txt
+include CHANGES.txt
+include LICENSE.txt
+include docs/Makefile
+recursive-include docs/source *
+global-exclude .DS_Store
+global-exclude *.pyc
+global-exclude .gitignore

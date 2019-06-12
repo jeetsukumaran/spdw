@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 ###############################################################################
@@ -38,7 +38,6 @@ import scipy
 from scipy import stats
 from scipy.optimize import curve_fit
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import spdw
 
 
