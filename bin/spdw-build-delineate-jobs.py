@@ -241,15 +241,17 @@ def main():
         # extra files for demo
         if args.write_extra_for_demo:
             psm.decorate_tree(
+                    lineage_tree=lineage_tree,
+                    orthospecies_tree=orthospecies_tree,
                     lineage_species_label_map=lineage_species_label_map,
                     unconstrained_lineage_leaf_labels=unconstrained_lineage_leaf_labels,
                     )
             demo_output_prefix = "{}.{:04d}.demo".format(output_prefix, tree_idx+1)
             lineage_tree.write(path="{}.lineages.nex".format(demo_output_prefix),
-                    supplemental_blocks=[lineage_tree_figtree_block],
+                    supplemental_blocks=[lineage_tree.figtree_block],
                     schema="nexus")
             orthospecies_tree.write(path="{}.species.nex".format(demo_output_prefix),
-                    supplemental_blocks=[orthospecies_tree_figtree_block],
+                    supplemental_blocks=[orthospecies_tree.figtree_block],
                     schema="nexus")
 
         # for post analysis assessment (not used by the inference program)

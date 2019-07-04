@@ -173,6 +173,8 @@ class ProtractedSpeciationTreeGenerator(object):
         return species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map
 
     def decorate_tree(self,
+            lineage_tree,
+            orthospecies_tree,
             lineage_species_label_map,
             unconstrained_lineage_leaf_labels,
             ):
@@ -221,7 +223,7 @@ class ProtractedSpeciationTreeGenerator(object):
             # 'set legend.isShown=true;',
             # 'set legend.significantDigits=4;',
         #     ])
-        lineage_tree_figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(lineage_tree_figtree_block))
+        lineage_tree.figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(lineage_tree_figtree_block))
         orthospecies_tree_figtree_block = [
                 'set appearance.branchLineWidth=5.0;',
                 'set scaleBar.isShown=false;',
@@ -250,4 +252,4 @@ class ProtractedSpeciationTreeGenerator(object):
             # 'set legend.isShown=true;',
             # 'set legend.significantDigits=4;',
         #     ])
-        orthospecies_tree_figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(orthospecies_tree_figtree_block))
+        orthospecies_tree.figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(orthospecies_tree_figtree_block))
