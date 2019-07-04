@@ -8,7 +8,6 @@ import seaborn as sns
 __version__ = "1.0.0"
 __project__ = "spdw"
 
-
 def render_output(args, name):
     if args.output_prefix:
         # ax.get_figure().savefig(
