@@ -255,45 +255,11 @@ def main():
                 population_size=args.population_size,
                 rng=rng,
                 )
-
-        # is_split_into_pseudopopulations = True
-        # num_pseudopopulations = 2
-        # if is_split_into_pseudopopulations:
-        #     pseudopopulation_tree = dendropy.Tree(source_tree)
-        #     pseudopopulation_tree.taxon_namespace = dendropy.TaxonNamespace()
-        #     population_label_gene_taxa = {}
-        #     for gtaxon in gene_trees.taxon_namespace:
-        #         try:
-        #             population_label_gene_taxa[gtaxon.population_label].append(gtaxon)
-        #         except KeyError:
-        #             population_label_gene_taxa[gtaxon.population_label]= [gtaxon]
-        #     for parent_node in pseudopopulation_tree.leaf_node_iter():
-        #         population_taxon = parent_node.taxon
-        #         parent_node.taxon = None
-        #         pseudopopulation_nodes = []
-        #         for pseudopopulation_idx in range(num_pseudopopulations):
-        #             nd = parent_node.new_child(edge_length=0.0)
-        #             pseudopopulation_label = "{}.pseudopop{}".format(population_taxon.label, pseudopopulation_idx+1)
-        #             nd.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
-        #             pseudopopulation_nodes.append(nd)
-        #         for gidx, gtaxon in enumerate(population_label_gene_taxa[population_taxon.label]):
-        #             pseudo_idx = gidx % len(pseudopopulation_nodes)
-        #             assigned_pop = pseudopopulation_nodes[pseudo_idx].taxon
-        #             gtaxon.population_label = assigned_pop.label
-        #             try:
-        #                 assigned_pop.num_individuals_sampled += 1
-        #             except AttributeError:
-        #                 assigned_pop.num_individuals_sampled = 1
-        #     population_tree = pseudopopulation_tree
-        #     for t in population_tree.taxon_namespace:
-        #         print("{}: {}".format(t.label, t.num_individuals_sampled))
-        # else:
-        #     population_tree = source_tree
-        #     for taxon in population_tree.taxon_namespace:
-        #         taxon.num_individuals_sampled = args.num_individuals_per_population
-        population_tree_outpath = "{}.guide-tree.nex".format(job_title)
+        gene_trees.write(
+                path="{}.gene-trees.nex".format(job_title),
+                schema="nexus")
         population_tree.write(
-                path=population_tree_outpath,
+                path="{}.guide-tree.nex".format(job_title),
                 schema="nexus")
 
         imap_filepath = "{}.input.imap.txt".format(job_title)
