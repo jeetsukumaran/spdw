@@ -192,7 +192,7 @@ def main():
     tree_idx = 0
     for tree_idx in range(args.num_replicates):
         lineage_tree, orthospecies_tree = psm.generate_sample()
-        species_lineage_label_map, lineage_species_label_map = psm.build_label_maps(orthospecies_tree)
+        species_lineage_label_map, lineage_species_label_map = spdwlib.build_tree_label_maps(orthospecies_tree)
         true_species_leafsets = sorted(species_lineage_label_map.values())
         entry = collections.OrderedDict()
         entry["tree_filepath"] = "{}.{:04d}.nex".format(output_prefix, tree_idx+1)

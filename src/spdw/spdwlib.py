@@ -98,16 +98,16 @@ class ProtractedSpeciationTreeGenerator(object):
                     break
         return lineage_tree, orthospecies_tree
 
-    def build_label_maps(self, orthospecies_tree):
-        species_lineage_label_map = collections.OrderedDict()
-        lineage_species_label_map = {}
-        for k in sorted([t.label for t in orthospecies_tree.taxon_namespace]):
-            species_lineage_label_map[k] = []
-        for ond in orthospecies_tree.leaf_node_iter():
-            species_lineage_label_map[ond.taxon.label] = sorted([lnd.taxon.label for lnd in ond.lineage_tree_nodes])
-            for lnd in ond.lineage_tree_nodes:
-                lineage_species_label_map[lnd.taxon.label] = ond.taxon.label
-        return species_lineage_label_map, lineage_species_label_map
+def build_tree_label_maps(orthospecies_tree):
+    species_lineage_label_map = collections.OrderedDict()
+    lineage_species_label_map = {}
+    for k in sorted([t.label for t in orthospecies_tree.taxon_namespace]):
+        species_lineage_label_map[k] = []
+    for ond in orthospecies_tree.leaf_node_iter():
+        species_lineage_label_map[ond.taxon.label] = sorted([lnd.taxon.label for lnd in ond.lineage_tree_nodes])
+        for lnd in ond.lineage_tree_nodes:
+            lineage_species_label_map[lnd.taxon.label] = ond.taxon.label
+    return species_lineage_label_map, lineage_species_label_map
 
 def generate_constraints(
         lineage_tree,
