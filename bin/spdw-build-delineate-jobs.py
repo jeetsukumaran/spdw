@@ -186,9 +186,6 @@ def main():
             min_extant_lineages=args.min_extant_lineages,
             num_extant_orthospecies=args.num_extant_orthospecies,
             min_extant_orthospecies=args.min_extant_orthospecies,
-            min_unconstrained_leaves=args.min_unconstrained_leaves,
-            max_unconstrained_leaves=args.max_unconstrained_leaves,
-            num_unconstrained_leaves=args.num_unconstrained_leaves,
             rng=rng,
             )
     output_prefix = "{}_spr{:0.3f}_".format(args.title, true_speciation_completion_rate)
@@ -212,11 +209,15 @@ def main():
         # for speciation rate estimation; ignored by species partition estimation
         # for species partition estimation
         if args.constrain_partitions is not None:
-            species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = psm.generate_constraints(
+            species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints(
                     lineage_tree=lineage_tree,
                     constraint_type=args.constrain_partitions,
                     species_lineage_label_map=species_lineage_label_map,
                     lineage_species_label_map=lineage_species_label_map,
+                    min_unconstrained_leaves=args.min_unconstrained_leaves,
+                    max_unconstrained_leaves=args.max_unconstrained_leaves,
+                    num_unconstrained_leaves=args.num_unconstrained_leaves,
+                    rng=rng,
                     )
         else:
             assert args.constrain_partitions is None
@@ -240,7 +241,7 @@ def main():
 
         # extra files for demo
         if args.write_extra_for_demo:
-            psm.decorate_tree(
+            spdwlib.decorate_tree(
                     lineage_tree=lineage_tree,
                     orthospecies_tree=orthospecies_tree,
                     lineage_species_label_map=lineage_species_label_map,
