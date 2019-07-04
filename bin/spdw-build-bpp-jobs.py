@@ -5,6 +5,7 @@ import os
 import sys
 import collections
 import csv
+import re
 
 import random
 import collections
@@ -109,13 +110,19 @@ def generate_contained_trees(
                 # pseudopopulation_label = "{}.pseudopop{}".format(parent_taxon.label, pidx+1)
                 pseudopopulation_label = "{}.sub{}".format(parent_taxon.label, pidx+1)
                 nd.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
+                nd.taxon.true_population_label = parent_taxon.label
         containing_tree = pseudopopulation_tree
     if contained_taxon_namespace is None:
         contained_taxon_namespace = dendropy.TaxonNamespace()
     contained_to_containing_map = {}
+    pop_samples = collections.Counter()
     for sp_idx, sp_tax in enumerate(containing_tree.taxon_namespace):
         for gidx in range(num_individuals_per_subpopulation_lineage):
-            glabel = "{sp}_i{ind}^{sp}_i{ind}".format(sp=sp_tax.label, ind=gidx+1)
+            pop_samples[sp_tax.true_population_label] += 1
+            sample_idx = pop_samples[sp_tax.true_population_label]
+            glabel = "{sp}_i{ind}^{sp}_i{ind}".format(
+                    sp=sp_tax.true_population_label,
+                    ind=sample_idx)
             # glabel = "{sp}^{sp}_{ind}".format(sp=sp_tax.label, ind=gidx+1)
             g = contained_taxon_namespace.require_taxon(label=glabel)
             g.population_label = sp_tax.label

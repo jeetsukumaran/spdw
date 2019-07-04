@@ -43,7 +43,12 @@ def calculate_bpp_full_species_tree(
             )
     tree0.encode_bipartitions()
     guide_tree.encode_bipartitions()
-    assert treecompare.symmetric_difference(tree0, guide_tree) == 0
+    try:
+        assert treecompare.symmetric_difference(tree0, guide_tree) == 0
+    except AssertionError:
+        print("[BPP tree]{}".format(tree0.as_string("newick")))
+        print("[Guide tree]{}".format(guide_tree.as_string("newick")))
+        raise
     for nd in tree0:
         edge_len = guide_tree.bipartition_edge_map[nd.edge.bipartition].length
         nd.edge.length = edge_len
