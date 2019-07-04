@@ -7,8 +7,10 @@ import collections
 import csv
 
 import random
+import collections
 import argparse
 from dendropy.model import reconcile
+from dendropy.model import birthdeath
 from dendropy.interop import seqgen
 from dendropy.calculate import popgenstat
 import dendropy
@@ -57,9 +59,9 @@ BPP_TEMPLATE = """\
 
      speciesmodelprior = 1         * 0: uniform labeled histories; 1:uniform rooted trees
 
-  species&tree = {num_species}  {species_labels}
-                     {num_individuals_per_species}
-                 {species_tree}
+  species&tree = {num_populations}  {population_labels}
+                     {num_individuals_per_population}
+                 {bpp_guide_tree}
 
        usedata = 1    * 0: no data (prior); 1:seq like
          nloci = {num_loci}    * number of data sets in seqfile
@@ -127,6 +129,11 @@ def main():
             default="nexus",
             dest="schema",
             help="Input trees format (default: $(default)s).")
+    # parser.add_argument("--split-populations",
+    #         help="Introduce splits between individuals within populations in *guide tree* passed to BPP."
+    #              " The true tree, on which the sequences etc., remains the same. The purpose of this finer"
+    #              " grained oversplitting is to allow BPP to collapse splits not supported by actual"
+    #              " population structure.")
     parser.add_argument("-z", "--random-seed",
             type=int,
             default=None,
@@ -165,6 +172,7 @@ def main():
         random_seed = random.randint(0, sys.maxsize-1)
     else:
         random_seed = args.random_seed
+
     rng = random.Random(random_seed)
     _log("Random seed: {}".format(random_seed))
 
@@ -191,6 +199,7 @@ def main():
                 preserve_underscores=True,
                 )
 
+
         manifest_entry["speciation_initiation_from_orthospecies_rate"] = try_to_coerce_to_float(source_tree.annotations["speciation_initiation_from_orthospecies_rate"].value)
         manifest_entry["speciation_initiation_from_incipient_species_rate"] = try_to_coerce_to_float(source_tree.annotations["speciation_initiation_from_incipient_species_rate"].value)
         manifest_entry["speciation_completion_rate"] = try_to_coerce_to_float(source_tree.annotations["speciation_completion_rate"].value)
@@ -207,7 +216,6 @@ def main():
         manifest_entry["mutation_rate_per_site"] = args.mutation_rate_per_site
 
         source_tree.calc_node_ages()
-
         gene_trees = generate_contained_trees(
                 containing_tree=source_tree,
                 num_individuals_per_population=args.num_individuals_per_population,
@@ -215,6 +223,46 @@ def main():
                 population_size=args.population_size,
                 rng=rng,
                 )
+
+        is_split_into_pseudopopulations = True
+        num_pseudopopulations = 2
+        if is_split_into_pseudopopulations:
+            pseudopopulation_tree = dendropy.Tree(source_tree)
+            pseudopopulation_tree.taxon_namespace = dendropy.TaxonNamespace()
+            population_label_gene_taxa = {}
+            for gtaxon in gene_trees.taxon_namespace:
+                try:
+                    population_label_gene_taxa[gtaxon.population_label].append(gtaxon)
+                except KeyError:
+                    population_label_gene_taxa[gtaxon.population_label]= [gtaxon]
+            for parent_node in pseudopopulation_tree.leaf_node_iter():
+                population_taxon = parent_node.taxon
+                parent_node.taxon = None
+                pseudopopulation_nodes = []
+                for pseudopopulation_idx in range(num_pseudopopulations):
+                    nd = parent_node.new_child(edge_length=0.0)
+                    pseudopopulation_label = "{}.pseudopop{}".format(population_taxon.label, pseudopopulation_idx+1)
+                    nd.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
+                    pseudopopulation_nodes.append(nd)
+                for gidx, gtaxon in enumerate(population_label_gene_taxa[population_taxon.label]):
+                    pseudo_idx = gidx % len(pseudopopulation_nodes)
+                    assigned_pop = pseudopopulation_nodes[pseudo_idx].taxon
+                    gtaxon.population_label = assigned_pop.label
+                    try:
+                        assigned_pop.num_individuals_sampled += 1
+                    except AttributeError:
+                        assigned_pop.num_individuals_sampled = 1
+            population_tree = pseudopopulation_tree
+            for t in population_tree.taxon_namespace:
+                print("{}: {}".format(t.label, t.num_individuals_sampled))
+        else:
+            population_tree = source_tree
+            for taxon in population_tree.taxon_namespace:
+                taxon.num_individuals_sampled = args.num_individuals_per_population
+        population_tree_outpath = "{}.guide-tree.nex".format(job_title)
+        population_tree.write(
+                path=population_tree_outpath,
+                schema="nexus")
 
         imap_filepath = "{}.input.imap.txt".format(job_title)
         f = open(imap_filepath, "w")
@@ -228,19 +276,17 @@ def main():
         chars_filepath = "{}.input.chars.txt".format(job_title)
         f = open(chars_filepath, "w")
         for cm_idx, cm in enumerate(d0.char_matrices):
+            # td = popgenstat.tajimas_d(cm)
+            td = 1
             sys.stderr.write("Locus {}: pi = {}, Tajima's D = {}\n".format(
                 cm_idx+1,
                 popgenstat.nucleotide_diversity(cm),
-                popgenstat.tajimas_d(cm)))
+                td))
             cm.write(file=f, schema="phylip")
             f.write("\n")
 
         out_filepath = "{}.results.out.txt".format(job_title)
         mcmc_filepath = "{}.results.mcmc.txt".format(job_title)
-        num_species = len(source_tree.taxon_namespace)
-        species_labels = " ".join(t.label for t in source_tree.taxon_namespace)
-        num_individuals_per_species = " ".join(str(args.num_individuals_per_population) for i in range(len(source_tree.taxon_namespace)))
-
         # Inverse Gamma Prior
         # IG(a,b), with mean given by b/(a-1)
         # So,
@@ -251,23 +297,29 @@ def main():
         theta_prior_a = 3.0
         theta_prior_b = theta_prior_mean * (theta_prior_a - 1)
         if args.no_scale_tree_by_mutation_rate:
-            tau_prior_mean = source_tree.seed_node.age
+            tau_prior_mean = population_tree.seed_node.age
         else:
-            # tau_prior_mean = source_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
-            tau_prior_mean = source_tree.seed_node.age * args.mutation_rate_per_site * (1.0 / (args.num_loci_per_individual * args.num_characters_per_locus))
-            # tau_prior_mean = source_tree.seed_node.age / 100000
+            # tau_prior_mean = population_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
+            tau_prior_mean = population_tree.seed_node.age * args.mutation_rate_per_site * (1.0 / (args.num_loci_per_individual * args.num_characters_per_locus))
+            # tau_prior_mean = population_tree.seed_node.age / 100000
         tau_prior_a = 3.0
         tau_prior_b = tau_prior_mean * (tau_prior_a - 1)
 
-        manifest_entry["num_input_lineages"] = len(species_labels)
+        num_populations = len(population_tree.taxon_namespace)
+        population_labels = " ".join(t.label for t in population_tree.taxon_namespace)
+        # num_individuals_per_population = " ".join(str(nd.num_individuals_per_population) for i in range(len(population_tree.taxon_namespace)))
+        num_individuals_per_population = " ".join(str(t.num_individuals_sampled) for t in population_tree.taxon_namespace)
+        num_input_lineages = len(population_labels)
+
+        manifest_entry["num_input_lineages"] = num_input_lineages
         manifest_entry["theta"] = theta_prior_mean
         manifest_entry["theta_prior_a"] = theta_prior_a
         manifest_entry["theta_prior_b"] = theta_prior_b
-        manifest_entry["root_age"] = source_tree.seed_node.age
+        manifest_entry["root_age"] = population_tree.seed_node.age
         manifest_entry["tau_prior_a"] = tau_prior_a
         manifest_entry["tau_prior_b"] = tau_prior_b
 
-        species_tree = source_tree.as_string(
+        bpp_guide_tree = population_tree.as_string(
                 schema="newick",
                 suppress_leaf_taxon_labels=False,
                 suppress_leaf_node_labels=True,
@@ -286,10 +338,10 @@ def main():
                 imap_filepath=imap_filepath,
                 out_filepath=out_filepath,
                 mcmc_filepath=mcmc_filepath,
-                num_species=num_species,
-                species_labels=species_labels,
-                num_individuals_per_species=num_individuals_per_species,
-                species_tree=species_tree,
+                num_populations=num_populations,
+                population_labels=population_labels,
+                num_individuals_per_population=num_individuals_per_population,
+                bpp_guide_tree=bpp_guide_tree,
                 theta_prior_mean=theta_prior_mean,
                 theta_prior_a=theta_prior_a,
                 theta_prior_b=theta_prior_b,
@@ -297,7 +349,7 @@ def main():
                 tau_prior_a=tau_prior_a,
                 tau_prior_b=tau_prior_b,
                 num_loci=args.num_loci_per_individual,
-                root_age=source_tree.seed_node.age
+                root_age=population_tree.seed_node.age
                 )
         bpp_ctl_filepath = "{}.input.bpp.ctl".format(job_title)
         f = open(bpp_ctl_filepath, "w")
