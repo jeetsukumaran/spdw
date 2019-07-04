@@ -162,7 +162,6 @@ def main():
     ]
     with open(LOGPATH, "a") as dest:
         dest.write("\t".join(log_message) + "\n")
-    color_map = spdwlib.ColorMap()
 
     true_speciation_completion_rate = args.speciation_completion_rate
     splitting_rate = args.splitting_rate
