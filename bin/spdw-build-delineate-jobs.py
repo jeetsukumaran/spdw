@@ -211,6 +211,7 @@ def main():
         if args.constrain_partitions is not None:
             species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints(
                     lineage_tree=lineage_tree,
+                    orthospecies_tree=orthospecies_tree,
                     constraint_type=args.constrain_partitions,
                     species_lineage_label_map=species_lineage_label_map,
                     lineage_species_label_map=lineage_species_label_map,

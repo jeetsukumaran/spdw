@@ -111,14 +111,18 @@ def build_tree_label_maps(orthospecies_tree):
 
 def generate_constraints(
         lineage_tree,
+        orthospecies_tree,
         constraint_type,
-        species_lineage_label_map,
-        lineage_species_label_map,
         min_unconstrained_leaves,
         max_unconstrained_leaves,
         num_unconstrained_leaves,
         rng,
+        species_lineage_label_map=None,
+        lineage_species_label_map=None,
         ):
+    if species_lineage_label_map is None or lineage_species_label_map is None:
+        species_lineage_label_map, lineage_species_label_map = build_tree_label_maps(
+                orthospecies_tree=orthospecies_tree)
     true_species_leafsets = sorted(species_lineage_label_map.values())
     species_leafset_constraints = None
     if constraint_type == "topological":
