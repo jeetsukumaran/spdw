@@ -168,7 +168,7 @@ def main():
     data_options = parser.add_argument_group("Data Options")
     data_options.add_argument("--population-size",
             type=float,
-            default=1.0,
+            default=1e6,
             help="Population size (default: %(default)s).")
     data_options.add_argument(
             "--num-subpopulation-lineages-per-population",
