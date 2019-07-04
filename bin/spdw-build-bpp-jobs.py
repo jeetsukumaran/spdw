@@ -92,15 +92,27 @@ def generate_contained_trees(
         containing_tree,
         contained_taxon_namespace=None,
         population_size=1,
-        num_individuals_per_population=4,
+        num_subpopulation_lineages_per_population=1,
+        num_individuals_per_subpopulation_lineage=4,
         num_gene_trees=5,
         rng=None):
+    assert len(containing_tree.taxon_namespace) > 0
+    if num_subpopulation_lineages_per_population > 1:
+        pseudopopulation_tree = dendropy.Tree(containing_tree)
+        pseudopopulation_tree.taxon_namespace = dendropy.TaxonNamespace()
+        for parent_node in pseudopopulation_tree.leaf_node_iter():
+            parent_taxon = parent_node.taxon
+            parent_node.taxon = None
+            for pidx in range(num_subpopulation_lineages_per_population):
+                label = "{}.pseudo{}".format(parent_node.label, pidx)
+                nd = parent_node.new_child(edge_length=0.0)
+                pseudopopulation_label = "{}.pseudopop{}".format(parent_taxon.label, pidx+1)
+                nd.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
     if contained_taxon_namespace is None:
         contained_taxon_namespace = dendropy.TaxonNamespace()
     contained_to_containing_map = {}
-    assert len(containing_tree.taxon_namespace) > 0
     for sp_idx, sp_tax in enumerate(containing_tree.taxon_namespace):
-        for gidx in range(num_individuals_per_population):
+        for gidx in range(num_individuals_per_subpopulation_lineage):
             glabel = "{sp}_{ind}^{sp}_{ind}".format(sp=sp_tax.label, ind=gidx+1)
             # glabel = "{sp}^{sp}_{ind}".format(sp=sp_tax.label, ind=gidx+1)
             g = contained_taxon_namespace.require_taxon(label=glabel)
@@ -116,7 +128,7 @@ def generate_contained_trees(
                 default_pop_size=population_size,
                 rng=rng)
         gene_trees.append(gt)
-    return gene_trees
+    return containing_tree, gene_trees
 
 
 def main():
@@ -146,10 +158,16 @@ def main():
             type=int,
             default=1.0,
             help="Population size (default: %(default)s).")
-    data_options.add_argument("--num-individuals-per-population",
+    data_options.add_argument(
+            "--num-subpopulation-lineages-per-population",
+            "--num-subpopulations",
+            type=int,
+            default=1,
+            help="In guide tree passed to BPP, divide individuals from single populations into multiple nominal populations (with no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
+    data_options.add_argument("--num-individuals-per-subpopulation-lineage",
             type=int,
             default=4,
-            help="Number of individuals sampled per incipient species lineage (default: %(default)s).")
+            help="Number of individuals sampled per subpopulation lineage within each population (default: %(default)s).")
     data_options.add_argument("--num-loci-per-individual",
             type=int,
             default=10,
@@ -211,54 +229,56 @@ def main():
         manifest_entry["num_extant_orthospecies"] = try_to_coerce_to_float(source_tree.annotations["num_extant_orthospecies"].value)
         manifest_entry["source_tree_type"] = source_tree.annotations["tree_type"].value
         manifest_entry["population_size"] = args.population_size
-        manifest_entry["num_individuals_per_population"] = args.num_individuals_per_population
+        manifest_entry["num_subpopulation_lineages_per_population"] = args.num_subpopulation_lineages_per_population
+        manifest_entry["num_individuals_per_subpopulation_lineage"] = args.num_individuals_per_subpopulation_lineage
         manifest_entry["num_loci_per_individual"] = args.num_loci_per_individual
         manifest_entry["mutation_rate_per_site"] = args.mutation_rate_per_site
 
         source_tree.calc_node_ages()
-        gene_trees = generate_contained_trees(
+        population_tree, gene_trees = generate_contained_trees(
                 containing_tree=source_tree,
-                num_individuals_per_population=args.num_individuals_per_population,
+                num_subpopulation_lineages_per_population=args.num_subpopulation_lineages_per_population,
+                num_individuals_per_subpopulation_lineage=args.num_individuals_per_subpopulation_lineage,
                 num_gene_trees=args.num_loci_per_individual,
                 population_size=args.population_size,
                 rng=rng,
                 )
 
-        is_split_into_pseudopopulations = True
-        num_pseudopopulations = 2
-        if is_split_into_pseudopopulations:
-            pseudopopulation_tree = dendropy.Tree(source_tree)
-            pseudopopulation_tree.taxon_namespace = dendropy.TaxonNamespace()
-            population_label_gene_taxa = {}
-            for gtaxon in gene_trees.taxon_namespace:
-                try:
-                    population_label_gene_taxa[gtaxon.population_label].append(gtaxon)
-                except KeyError:
-                    population_label_gene_taxa[gtaxon.population_label]= [gtaxon]
-            for parent_node in pseudopopulation_tree.leaf_node_iter():
-                population_taxon = parent_node.taxon
-                parent_node.taxon = None
-                pseudopopulation_nodes = []
-                for pseudopopulation_idx in range(num_pseudopopulations):
-                    nd = parent_node.new_child(edge_length=0.0)
-                    pseudopopulation_label = "{}.pseudopop{}".format(population_taxon.label, pseudopopulation_idx+1)
-                    nd.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
-                    pseudopopulation_nodes.append(nd)
-                for gidx, gtaxon in enumerate(population_label_gene_taxa[population_taxon.label]):
-                    pseudo_idx = gidx % len(pseudopopulation_nodes)
-                    assigned_pop = pseudopopulation_nodes[pseudo_idx].taxon
-                    gtaxon.population_label = assigned_pop.label
-                    try:
-                        assigned_pop.num_individuals_sampled += 1
-                    except AttributeError:
-                        assigned_pop.num_individuals_sampled = 1
-            population_tree = pseudopopulation_tree
-            for t in population_tree.taxon_namespace:
-                print("{}: {}".format(t.label, t.num_individuals_sampled))
-        else:
-            population_tree = source_tree
-            for taxon in population_tree.taxon_namespace:
-                taxon.num_individuals_sampled = args.num_individuals_per_population
+        # is_split_into_pseudopopulations = True
+        # num_pseudopopulations = 2
+        # if is_split_into_pseudopopulations:
+        #     pseudopopulation_tree = dendropy.Tree(source_tree)
+        #     pseudopopulation_tree.taxon_namespace = dendropy.TaxonNamespace()
+        #     population_label_gene_taxa = {}
+        #     for gtaxon in gene_trees.taxon_namespace:
+        #         try:
+        #             population_label_gene_taxa[gtaxon.population_label].append(gtaxon)
+        #         except KeyError:
+        #             population_label_gene_taxa[gtaxon.population_label]= [gtaxon]
+        #     for parent_node in pseudopopulation_tree.leaf_node_iter():
+        #         population_taxon = parent_node.taxon
+        #         parent_node.taxon = None
+        #         pseudopopulation_nodes = []
+        #         for pseudopopulation_idx in range(num_pseudopopulations):
+        #             nd = parent_node.new_child(edge_length=0.0)
+        #             pseudopopulation_label = "{}.pseudopop{}".format(population_taxon.label, pseudopopulation_idx+1)
+        #             nd.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
+        #             pseudopopulation_nodes.append(nd)
+        #         for gidx, gtaxon in enumerate(population_label_gene_taxa[population_taxon.label]):
+        #             pseudo_idx = gidx % len(pseudopopulation_nodes)
+        #             assigned_pop = pseudopopulation_nodes[pseudo_idx].taxon
+        #             gtaxon.population_label = assigned_pop.label
+        #             try:
+        #                 assigned_pop.num_individuals_sampled += 1
+        #             except AttributeError:
+        #                 assigned_pop.num_individuals_sampled = 1
+        #     population_tree = pseudopopulation_tree
+        #     for t in population_tree.taxon_namespace:
+        #         print("{}: {}".format(t.label, t.num_individuals_sampled))
+        # else:
+        #     population_tree = source_tree
+        #     for taxon in population_tree.taxon_namespace:
+        #         taxon.num_individuals_sampled = args.num_individuals_per_population
         population_tree_outpath = "{}.guide-tree.nex".format(job_title)
         population_tree.write(
                 path=population_tree_outpath,
@@ -307,8 +327,8 @@ def main():
 
         num_populations = len(population_tree.taxon_namespace)
         population_labels = " ".join(t.label for t in population_tree.taxon_namespace)
-        # num_individuals_per_population = " ".join(str(nd.num_individuals_per_population) for i in range(len(population_tree.taxon_namespace)))
-        num_individuals_per_population = " ".join(str(t.num_individuals_sampled) for t in population_tree.taxon_namespace)
+        num_individuals_per_population = " ".join(str(args.num_individuals_per_subpopulation_lineage) for i in range(len(population_tree.taxon_namespace)))
+        # num_individuals_per_population = " ".join(str(t.num_individuals_sampled) for t in population_tree.taxon_namespace)
         num_input_lineages = len(population_labels)
 
         manifest_entry["num_input_lineages"] = num_input_lineages
