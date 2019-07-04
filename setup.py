@@ -41,6 +41,7 @@ setup(
         "bin/spdw-sim-bdstruct-coaltrees.py",
         "bin/spdw-sim-bdtrees.py",
         "bin/spdw-sim-coaltrees.py",
+        "bin/spdw-sim-protractedspeciationtrees.py",
     ],
     test_suite = "tests",
     url="http://github.com/jeetsukumaran/spdw",
