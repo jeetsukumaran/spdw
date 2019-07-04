@@ -187,6 +187,8 @@ def main():
             num_extant_orthospecies=args.num_extant_orthospecies,
             min_extant_orthospecies=args.min_extant_orthospecies,
             min_unconstrained_leaves=args.min_unconstrained_leaves,
+            max_unconstrained_leaves=args.max_unconstrained_leaves,
+            num_unconstrained_leaves=args.num_unconstrained_leaves,
             rng=rng,
             )
     output_prefix = "{}_spr{:0.3f}_".format(args.title, true_speciation_completion_rate)
@@ -209,65 +211,20 @@ def main():
         config = collections.OrderedDict()
         # for speciation rate estimation; ignored by species partition estimation
         # for species partition estimation
-        species_leafset_constraints = None
         if args.constrain_partitions is not None:
-            if args.constrain_partitions == "topological":
-                lineage_tree_internal_nodes = [lnd for lnd in lineage_tree.postorder_internal_node_iter() if lnd is not lineage_tree.seed_node]
-                rng.shuffle(lineage_tree_internal_nodes)
-                true_unconstrained_lineage_leaf_labels = None
-                for lineage_tree_internal_node in lineage_tree_internal_nodes:
-                    true_unconstrained_lineage_leaf_labels = set([lineage_tree_leaf_node.taxon.label for lineage_tree_leaf_node in lineage_tree_internal_node.leaf_iter()])
-                    if not args.num_unconstrained_leaves and not args.min_unconstrained_leaves and not args.max_unconstrained_leaves:
-                        break
-                    elif args.num_unconstrained_leaves:
-                        if len(true_unconstrained_lineage_leaf_labels) == args.num_unconstrained_leaves:
-                            break
-                    elif args.min_unconstrained_leaves and args.max_unconstrained_leaves:
-                        if len(true_unconstrained_lineage_leaf_labels) >= args.min_unconstrained_leaves and len(true_unconstrained_lineage_leaf_labels) <= args.max_unconstrained_leaves:
-                            break
-                    elif args.min_unconstrained_leaves and len(true_unconstrained_lineage_leaf_labels) >= args.min_unconstrained_leaves:
-                        break
-                    elif args.max_unconstrained_leaves and len(true_unconstrained_lineage_leaf_labels) <= args.max_unconstrained_leaves:
-                        break
-                    true_unconstrained_lineage_leaf_labels = None
-                else:
-                    raise ValueError("Unable to meet min/max unconstrained leaves criteria.")
-            elif args.constrain_partitions == "random":
-                lineage_leaf_labels = [taxon.label for taxon in lineage_tree.taxon_namespace]
-                if args.num_unconstrained_leaves:
-                    num_to_sample = args.num_unconstrained_leaves
-                else:
-                    if args.min_unconstrained_leaves:
-                        min_count = args.min_unconstrained_leaves
-                    else:
-                        min_count = 1
-                    if args.max_unconstrained_leaves:
-                        max_count = args.max_unconstrained_leaves
-                    else:
-                        max_count = len(lineage_leaf_labels)
-                    num_to_sample = rng.randint(min_count, max_count)
-                true_unconstrained_lineage_leaf_labels = rng.sample(lineage_leaf_labels, num_to_sample)
-            true_constrained_lineage_leaf_labels = sorted([lineage_tree_leaf_node.taxon.label for lineage_tree_leaf_node in lineage_tree.leaf_node_iter() if lineage_tree_leaf_node.taxon.label not in true_unconstrained_lineage_leaf_labels])
-            species_leafset_constraint_label_map = collections.OrderedDict()
-            for lineage_leaf_label in true_constrained_lineage_leaf_labels:
-                true_species_label = lineage_species_label_map[lineage_leaf_label]
-                try:
-                    species_leafset_constraint_label_map[true_species_label].append(lineage_leaf_label)
-                except KeyError:
-                    species_leafset_constraint_label_map[true_species_label] = [lineage_leaf_label]
-            for species_label in species_leafset_constraint_label_map:
-                species_leafset_constraint_label_map[species_label].sort()
-            species_leafset_constraints = []
-            for sp in species_lineage_label_map:
-                if sp in species_leafset_constraint_label_map:
-                    species_leafset_constraints.append(sorted(species_leafset_constraint_label_map[sp]))
+            species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = psm.generate_constraints(
+                    lineage_tree=lineage_tree,
+                    constraint_type=args.constrain_partitions,
+                    species_lineage_label_map=species_lineage_label_map,
+                    lineage_species_label_map=lineage_species_label_map,
+                    )
         else:
             assert args.constrain_partitions is None
             assert args.num_unconstrained_leaves is None
             assert args.min_unconstrained_leaves is None
             assert args.max_unconstrained_leaves is None
-            true_constrained_lineage_leaf_labels = []
-            true_unconstrained_lineage_leaf_labels = [lineage_tree_leaf_node.taxon.label for lineage_tree_leaf_node in lineage_tree.leaf_node_iter()]
+            constrained_lineage_leaf_labels = []
+            unconstrained_lineage_leaf_labels = [lineage_tree_leaf_node.taxon.label for lineage_tree_leaf_node in lineage_tree.leaf_node_iter()]
             species_leafset_constraint_label_map = {}
             species_leafset_constraints = None
         if species_leafset_constraints is not None:
@@ -285,7 +242,7 @@ def main():
         if args.write_extra_for_demo:
             constrained_color, unconstrained_color = spdwlib.ColorMap.contrast_pairs[0]
             demo_output_prefix = "{}.{:04d}.demo".format(output_prefix, tree_idx+1)
-            true_unconstrained_lineage_leaf_label_set = set(true_unconstrained_lineage_leaf_labels)
+            true_unconstrained_lineage_leaf_label_set = set(unconstrained_lineage_leaf_labels)
             for nd in lineage_tree:
                 if nd.is_leaf():
                     is_constrained = nd.taxon.label in true_unconstrained_lineage_leaf_label_set
@@ -370,13 +327,13 @@ def main():
         # for post analysis assessment (not used by the inference program)
         config["test_info"] = collections.OrderedDict()
         config["test_info"]["species_leafsets"] = true_species_leafsets
-        config["test_info"]["constrained_lineages"] = sorted(true_constrained_lineage_leaf_labels)
-        config["test_info"]["unconstrained_lineages"] = sorted(true_unconstrained_lineage_leaf_labels)
+        config["test_info"]["constrained_lineages"] = sorted(constrained_lineage_leaf_labels)
+        config["test_info"]["unconstrained_lineages"] = sorted(unconstrained_lineage_leaf_labels)
         config["test_info"]["species_leafset_constraint_label_map"] = species_leafset_constraint_label_map
         config["test_info"]["species_partition_estimation_num_constrained_species"] = len(species_leafset_constraint_label_map)
-        config["test_info"]["species_partition_estimation_num_constrained_lineages"] = len(true_constrained_lineage_leaf_labels)
-        config["test_info"]["species_partition_estimation_num_unconstrained_lineages"] = len(true_unconstrained_lineage_leaf_labels)
-        config["test_info"]["species_partition_estimation_num_unconstrained_lineages"] = len(true_unconstrained_lineage_leaf_labels)
+        config["test_info"]["species_partition_estimation_num_constrained_lineages"] = len(constrained_lineage_leaf_labels)
+        config["test_info"]["species_partition_estimation_num_unconstrained_lineages"] = len(unconstrained_lineage_leaf_labels)
+        config["test_info"]["species_partition_estimation_num_unconstrained_lineages"] = len(unconstrained_lineage_leaf_labels)
         config["test_info"]["true_speciation_completion_rate"] = true_speciation_completion_rate # not actually used?
         config["test_info"]["true_species_leafsets"] = true_species_leafsets
         config["test_info"]["true_num_species"] = len(true_species_leafsets)
