@@ -62,6 +62,8 @@ class ProtractedSpeciationTreeGenerator(object):
             speciation_completion_rate=self.speciation_completion_rate,
             orthospecies_extinction_rate=self.orthospecies_extinction_rate,
             incipient_species_extinction_rate=self.incipient_species_extinction_rate,
+            species_label_format_template="S{species_id}",
+            lineage_label_format_template="S{species_id}.L{lineage_id}",
             rng=self.rng,
             )
 

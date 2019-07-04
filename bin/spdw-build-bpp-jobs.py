@@ -105,7 +105,7 @@ def generate_contained_trees(
             parent_taxon = parent_node.taxon
             parent_node.taxon = None
             for pidx in range(num_subpopulation_lineages_per_population):
-                label = "{}.pseudo{}".format(parent_node.label, pidx)
+                # label = "{}.pseudo{}".format(parent_node.label, pidx)
                 nd = parent_node.new_child(edge_length=0.0)
                 # pseudopopulation_label = "{}.pseudopop{}".format(parent_taxon.label, pidx+1)
                 pseudopopulation_label = "{}.sub{}".format(parent_taxon.label, pidx+1)
