@@ -106,7 +106,8 @@ def generate_contained_trees(
             for pidx in range(num_subpopulation_lineages_per_population):
                 label = "{}.pseudo{}".format(parent_node.label, pidx)
                 nd = parent_node.new_child(edge_length=0.0)
-                pseudopopulation_label = "{}.pseudopop{}".format(parent_taxon.label, pidx+1)
+                # pseudopopulation_label = "{}.pseudopop{}".format(parent_taxon.label, pidx+1)
+                pseudopopulation_label = "{}.sub{}".format(parent_taxon.label, pidx+1)
                 nd.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
         containing_tree = pseudopopulation_tree
     if contained_taxon_namespace is None:
@@ -114,7 +115,7 @@ def generate_contained_trees(
     contained_to_containing_map = {}
     for sp_idx, sp_tax in enumerate(containing_tree.taxon_namespace):
         for gidx in range(num_individuals_per_subpopulation_lineage):
-            glabel = "{sp}_{ind}^{sp}_{ind}".format(sp=sp_tax.label, ind=gidx+1)
+            glabel = "{sp}_i{ind}^{sp}_i{ind}".format(sp=sp_tax.label, ind=gidx+1)
             # glabel = "{sp}^{sp}_{ind}".format(sp=sp_tax.label, ind=gidx+1)
             g = contained_taxon_namespace.require_taxon(label=glabel)
             g.population_label = sp_tax.label
