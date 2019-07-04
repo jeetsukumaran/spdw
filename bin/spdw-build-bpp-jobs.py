@@ -279,9 +279,11 @@ def main():
             except ZeroDivisionError as e:
                 td = "N/A"
             # td = 1
-            sys.stderr.write("Locus {}: pi = {}, Tajima's D = {}\n".format(
+            wtheta = popgenstat.wattersons_theta(cm)
+            sys.stderr.write("Locus {}: pi = {}, Watterson's theta per site = {}, Tajima's D = {}\n".format(
                 cm_idx+1,
                 popgenstat.nucleotide_diversity(cm),
+                wtheta/args.num_characters_per_locus,
                 td))
             cm.write(file=f, schema="phylip")
             f.write("\n")
