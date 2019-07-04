@@ -172,143 +172,82 @@ class ProtractedSpeciationTreeGenerator(object):
                 species_leafset_constraints.append(sorted(species_leafset_constraint_label_map[sp]))
         return species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map
 
-        # extra files for demo
-        if args.write_extra_for_demo:
-            constrained_color, unconstrained_color = spdwlib.ColorMap.contrast_pairs[0]
-            demo_output_prefix = "{}.{:04d}.demo".format(output_prefix, tree_idx+1)
-            true_unconstrained_lineage_leaf_label_set = set(unconstrained_lineage_leaf_labels)
-            for nd in lineage_tree:
-                if nd.is_leaf():
-                    is_constrained = nd.taxon.label in true_unconstrained_lineage_leaf_label_set
-                    nd.annotations["constrained"] = is_constrained
-                    species_label = lineage_species_label_map[nd.taxon.label]
-                    nd.annotations["species"] = species_label
-                    if False: #args.color_by_species:
-                        nd.annotations["!color"] = color_map(species_label)
-                    else:
-                        if is_constrained:
-                            nd.annotations["!color"] = constrained_color
-                        else:
-                            nd.annotations["!color"] = unconstrained_color
+    def decorate_tree(self,
+            lineage_species_label_map,
+            unconstrained_lineage_leaf_labels,
+            ):
+        constrained_color, unconstrained_color = ColorMap.contrast_pairs[0]
+        true_unconstrained_lineage_leaf_label_set = set(unconstrained_lineage_leaf_labels)
+        for nd in lineage_tree:
+            if nd.is_leaf():
+                is_constrained = nd.taxon.label in true_unconstrained_lineage_leaf_label_set
+                nd.annotations["constrained"] = is_constrained
+                species_label = lineage_species_label_map[nd.taxon.label]
+                nd.annotations["species"] = species_label
+                if False: #args.color_by_species:
+                    nd.annotations["!color"] = color_map(species_label)
                 else:
-                    nd.annotations["!color"] = "#aaaaaa"
-            lineage_tree_figtree_block = [
-                    'set appearance.branchLineWidth=5.0;',
-                    'set scaleBar.isShown=false;',
-            ]
-            # lineage_tree_figtree_block.extend([
-            #         'set nodeShapeExternal.colourAttribute="constrained";',
-            #         'set nodeShapeExternal.isShown=true;',
-            #         'set nodeShapeExternal.minSize=10.0;',
-            #         'set nodeShapeExternal.scaleType=Width;',
-            #         'set nodeShapeExternal.shapeType=Circle;',
-            #         'set nodeShapeExternal.size=10.0;',
-            #         'set nodeShapeExternal.sizeAttribute="Fixed";',
-            #     ])
-            lineage_tree_figtree_block.extend([
-                'set tipLabels.colorAttribute="species";',
-                'set tipLabels.displayAttribute="species";',
-                'set tipLabels.fontName="sansserif";',
-                'set tipLabels.fontSize=30;',
-                'set tipLabels.fontStyle=0;',
-                'set tipLabels.isShown=true;',
-                'set tipLabels.significantDigits=4;',
-                ])
-            # lineage_tree_figtree_block.extend([
-                # 'set legend.attribute="constrained";',
-                # 'set legend.fontSize=10.0;',
-                # 'set legend.isShown=true;',
-                # 'set legend.significantDigits=4;',
-            #     ])
-            lineage_tree_figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(lineage_tree_figtree_block))
-            lineage_tree.write(path="{}.lineages.nex".format(demo_output_prefix),
-                    supplemental_blocks=[lineage_tree_figtree_block],
-                    schema="nexus")
-
-            orthospecies_tree_figtree_block = [
-                    'set appearance.branchLineWidth=5.0;',
-                    'set scaleBar.isShown=false;',
-            ]
-            # orthospecies_tree_figtree_block.extend([
-            #         'set nodeShapeExternal.colourAttribute="constrained";',
-            #         'set nodeShapeExternal.isShown=true;',
-            #         'set nodeShapeExternal.minSize=10.0;',
-            #         'set nodeShapeExternal.scaleType=Width;',
-            #         'set nodeShapeExternal.shapeType=Circle;',
-            #         'set nodeShapeExternal.size=10.0;',
-            #         'set nodeShapeExternal.sizeAttribute="Fixed";',
-            #     ])
-            orthospecies_tree_figtree_block.extend([
-                # 'set tipLabels.colorAttribute="Name";',
-                'set tipLabels.displayAttribute="Name";',
-                'set tipLabels.fontName="sansserif";',
-                'set tipLabels.fontSize=30;',
-                'set tipLabels.fontStyle=0;',
-                'set tipLabels.isShown=true;',
-                'set tipLabels.significantDigits=4;',
-                ])
-            # orthospecies_tree_figtree_block.extend([
-                # 'set legend.attribute="constrained";',
-                # 'set legend.fontSize=10.0;',
-                # 'set legend.isShown=true;',
-                # 'set legend.significantDigits=4;',
-            #     ])
-            orthospecies_tree_figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(orthospecies_tree_figtree_block))
-            orthospecies_tree.write(path="{}.species.nex".format(demo_output_prefix),
-                    supplemental_blocks=[orthospecies_tree_figtree_block],
-                    schema="nexus")
-
-        # for post analysis assessment (not used by the inference program)
-        config["test_info"] = collections.OrderedDict()
-        config["test_info"]["species_leafsets"] = true_species_leafsets
-        config["test_info"]["constrained_lineages"] = sorted(constrained_lineage_leaf_labels)
-        config["test_info"]["unconstrained_lineages"] = sorted(unconstrained_lineage_leaf_labels)
-        config["test_info"]["species_leafset_constraint_label_map"] = species_leafset_constraint_label_map
-        config["test_info"]["species_partition_estimation_num_constrained_species"] = len(species_leafset_constraint_label_map)
-        config["test_info"]["species_partition_estimation_num_constrained_lineages"] = len(constrained_lineage_leaf_labels)
-        config["test_info"]["species_partition_estimation_num_unconstrained_lineages"] = len(unconstrained_lineage_leaf_labels)
-        config["test_info"]["species_partition_estimation_num_unconstrained_lineages"] = len(unconstrained_lineage_leaf_labels)
-        config["test_info"]["true_speciation_completion_rate"] = true_speciation_completion_rate # not actually used?
-        config["test_info"]["true_species_leafsets"] = true_species_leafsets
-        config["test_info"]["true_num_species"] = len(true_species_leafsets)
-        with open(entry["run_config_filepath"], "w") as dest:
-            json.dump(config, dest, indent=2)
-        job_prefix = entry["tree_filepath"].replace(".nex", "")
-        print(job_prefix)
-        job_commands = []
-        to_clean = []
-        common_settings = {
-                "run_config_filepath": entry["run_config_filepath"],
-                "tree_filepath": entry["tree_filepath"],
-                "num_lineages": len(entry["lineage_taxon_namespace"]),
-                "num_species": len(entry["species_taxon_namespace"]),
-                "true_speciation_completion_rate": true_speciation_completion_rate,
-                "batch_id": batch_id,
-                }
-        to_clean.append(common_settings["run_config_filepath"])
-        to_clean.append(common_settings["tree_filepath"])
-        if args.underflow_protection:
-            underflow_protection = "--underflow-protection"
-        else:
-            underflow_protection = ""
-        job_kwargs = dict(common_settings)
-        job_kwargs["underflow_protection"] = underflow_protection
-        job_kwargs["delineate_results_filepath"] = job_prefix + ".partition-probs.json"
-        to_clean.append(job_kwargs["delineate_results_filepath"])
-        if args.specify_true_speciation_completion_rate:
-            job_kwargs["speciation_completion_rate"] = "--speciation-completion-rate {}".format(true_speciation_completion_rate)
-        else:
-            job_kwargs["speciation_completion_rate"] = ""
-        job_kwargs["post_analysis_performance_assessment_command"] = "spdw-evaluate-delineate-jobs.py".format(SCRIPT_DIR)
-        job_commands.append(species_partition_estimation_job_template.format(**job_kwargs))
-        job_kwargs["joint_performance_assessment_results_filepath"] = job_prefix + ".joint-partition-est-perf.tsv"
-        job_commands.append(species_partition_estimation_joint_probability_analysis_template.format(**job_kwargs))
-        job_filepath = job_prefix + ".job"
-        if args.clean or args.very_clean:
-            clean_command = ["rm", "-f"]
-            clean_command.extend(to_clean)
-            if args.very_clean:
-                clean_command.append(job_filepath)
-            job_commands.append(" ".join(clean_command))
-        with open(job_filepath, "w") as dest:
-            dest.write(template.format(jobs="\n".join(job_commands)))
+                    if is_constrained:
+                        nd.annotations["!color"] = constrained_color
+                    else:
+                        nd.annotations["!color"] = unconstrained_color
+            else:
+                nd.annotations["!color"] = "#aaaaaa"
+        lineage_tree_figtree_block = [
+                'set appearance.branchLineWidth=5.0;',
+                'set scaleBar.isShown=false;',
+        ]
+        # lineage_tree_figtree_block.extend([
+        #         'set nodeShapeExternal.colourAttribute="constrained";',
+        #         'set nodeShapeExternal.isShown=true;',
+        #         'set nodeShapeExternal.minSize=10.0;',
+        #         'set nodeShapeExternal.scaleType=Width;',
+        #         'set nodeShapeExternal.shapeType=Circle;',
+        #         'set nodeShapeExternal.size=10.0;',
+        #         'set nodeShapeExternal.sizeAttribute="Fixed";',
+        #     ])
+        lineage_tree_figtree_block.extend([
+            'set tipLabels.colorAttribute="species";',
+            'set tipLabels.displayAttribute="species";',
+            'set tipLabels.fontName="sansserif";',
+            'set tipLabels.fontSize=30;',
+            'set tipLabels.fontStyle=0;',
+            'set tipLabels.isShown=true;',
+            'set tipLabels.significantDigits=4;',
+            ])
+        # lineage_tree_figtree_block.extend([
+            # 'set legend.attribute="constrained";',
+            # 'set legend.fontSize=10.0;',
+            # 'set legend.isShown=true;',
+            # 'set legend.significantDigits=4;',
+        #     ])
+        lineage_tree_figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(lineage_tree_figtree_block))
+        orthospecies_tree_figtree_block = [
+                'set appearance.branchLineWidth=5.0;',
+                'set scaleBar.isShown=false;',
+        ]
+        # orthospecies_tree_figtree_block.extend([
+        #         'set nodeShapeExternal.colourAttribute="constrained";',
+        #         'set nodeShapeExternal.isShown=true;',
+        #         'set nodeShapeExternal.minSize=10.0;',
+        #         'set nodeShapeExternal.scaleType=Width;',
+        #         'set nodeShapeExternal.shapeType=Circle;',
+        #         'set nodeShapeExternal.size=10.0;',
+        #         'set nodeShapeExternal.sizeAttribute="Fixed";',
+        #     ])
+        orthospecies_tree_figtree_block.extend([
+            # 'set tipLabels.colorAttribute="Name";',
+            'set tipLabels.displayAttribute="Name";',
+            'set tipLabels.fontName="sansserif";',
+            'set tipLabels.fontSize=30;',
+            'set tipLabels.fontStyle=0;',
+            'set tipLabels.isShown=true;',
+            'set tipLabels.significantDigits=4;',
+            ])
+        # orthospecies_tree_figtree_block.extend([
+            # 'set legend.attribute="constrained";',
+            # 'set legend.fontSize=10.0;',
+            # 'set legend.isShown=true;',
+            # 'set legend.significantDigits=4;',
+        #     ])
+        orthospecies_tree_figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(orthospecies_tree_figtree_block))
