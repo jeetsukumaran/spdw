@@ -192,25 +192,17 @@ def main():
     output_prefix = "{}_spr{:0.3f}_".format(args.title, true_speciation_completion_rate)
     tree_idx = 0
     for tree_idx in range(args.num_replicates):
-        lineage_tree, orthospecies_tree = psm.generate_sample(
-                )
-        sorted_species_lineages_map = collections.OrderedDict()
-        lineage_label_species_label_map = {}
-        for k in sorted([t.label for t in orthospecies_tree.taxon_namespace]):
-            sorted_species_lineages_map[k] = []
-        for ond in orthospecies_tree.leaf_node_iter():
-            sorted_species_lineages_map[ond.taxon.label] = sorted([lnd.taxon.label for lnd in ond.lineage_tree_nodes])
-            for lnd in ond.lineage_tree_nodes:
-                lineage_label_species_label_map[lnd.taxon.label] = ond.taxon.label
-        true_species_leafsets = sorted(sorted_species_lineages_map.values())
+        lineage_tree, orthospecies_tree = psm.generate_sample()
+        species_lineage_label_map, lineage_species_label_map = psm.build_label_maps(orthospecies_tree)
+        true_species_leafsets = sorted(species_lineage_label_map.values())
         entry = collections.OrderedDict()
         entry["tree_filepath"] = "{}.{:04d}.nex".format(output_prefix, tree_idx+1)
         entry["run_config_filepath"] = "{}.{:04d}.json".format(output_prefix, tree_idx+1)
         entry["lineage_taxon_namespace"] = [t.label for t in lineage_tree.taxon_namespace]
         entry["lineage_tree"] = lineage_tree.as_string("newick").replace("\n", "")
-        entry["species_taxon_namespace"] = sorted(sorted_species_lineages_map.keys())
+        entry["species_taxon_namespace"] = sorted(species_lineage_label_map.keys())
         entry["species_tree"] = orthospecies_tree.as_string("newick").replace("\n", "")
-        entry["species_lineages_map"] = sorted_species_lineages_map
+        entry["species_lineage_label_map"] = species_lineage_label_map
         data["trees"].append(entry)
         lineage_tree.write(path=entry["tree_filepath"], schema="nexus")
 
@@ -258,7 +250,7 @@ def main():
             true_constrained_lineage_leaf_labels = sorted([lineage_tree_leaf_node.taxon.label for lineage_tree_leaf_node in lineage_tree.leaf_node_iter() if lineage_tree_leaf_node.taxon.label not in true_unconstrained_lineage_leaf_labels])
             species_leafset_constraint_label_map = collections.OrderedDict()
             for lineage_leaf_label in true_constrained_lineage_leaf_labels:
-                true_species_label = lineage_label_species_label_map[lineage_leaf_label]
+                true_species_label = lineage_species_label_map[lineage_leaf_label]
                 try:
                     species_leafset_constraint_label_map[true_species_label].append(lineage_leaf_label)
                 except KeyError:
@@ -266,7 +258,7 @@ def main():
             for species_label in species_leafset_constraint_label_map:
                 species_leafset_constraint_label_map[species_label].sort()
             species_leafset_constraints = []
-            for sp in sorted_species_lineages_map:
+            for sp in species_lineage_label_map:
                 if sp in species_leafset_constraint_label_map:
                     species_leafset_constraints.append(sorted(species_leafset_constraint_label_map[sp]))
         else:
@@ -298,7 +290,7 @@ def main():
                 if nd.is_leaf():
                     is_constrained = nd.taxon.label in true_unconstrained_lineage_leaf_label_set
                     nd.annotations["constrained"] = is_constrained
-                    species_label = lineage_label_species_label_map[nd.taxon.label]
+                    species_label = lineage_species_label_map[nd.taxon.label]
                     nd.annotations["species"] = species_label
                     if False: #args.color_by_species:
                         nd.annotations["!color"] = color_map(species_label)
