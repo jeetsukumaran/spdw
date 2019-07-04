@@ -112,6 +112,9 @@ def generate_contained_trees(
                 nd.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
                 nd.taxon.true_population_label = parent_taxon.label
         containing_tree = pseudopopulation_tree
+    else:
+        for t in containing_tree.taxon_namespace:
+            t.true_population_label = t.label
     if contained_taxon_namespace is None:
         contained_taxon_namespace = dendropy.TaxonNamespace()
     contained_to_containing_map = {}
@@ -133,7 +136,7 @@ def generate_contained_trees(
             contained_to_containing_taxon_map=contained_to_containing_map)
     gene_trees = dendropy.TreeList(taxon_namespace=contained_taxon_namespace)
     for gtidx in range(num_gene_trees):
-        gt = ct.embed_contained_kingman(
+        gt = ct.simulate_contained_kingman(
                 default_pop_size=population_size,
                 rng=rng)
         gene_trees.append(gt)
@@ -159,12 +162,12 @@ def main():
             type=int,
             default=None,
             help="Seed for random number generator engine.")
-    parser.add_argument("-t", "--title",
+    parser.add_argument("-o", "--output-prefix",
             default="bpprun",
             help="Run title (default: '%(default)s')")
     data_options = parser.add_argument_group("Data Options")
     data_options.add_argument("--population-size",
-            type=int,
+            type=float,
             default=1.0,
             help="Population size (default: %(default)s).")
     data_options.add_argument(
@@ -216,7 +219,7 @@ def main():
     manifest_entries = []
     filepaths.extend(args.source_trees)
     for idx, filepath in enumerate(filepaths):
-        job_title = "{}_{:05d}".format(args.title, idx+1)
+        job_title = "{}_{:05d}".format(args.output_prefix, idx+1)
         manifest_entry = collections.OrderedDict()
         _log("{} of {}: {}: {}".format(idx+1, len(filepaths), job_title, filepath))
         source_tree = dendropy.Tree.get(
@@ -305,8 +308,11 @@ def main():
         chars_filepath = "{}.input.chars.txt".format(job_title)
         f = open(chars_filepath, "w")
         for cm_idx, cm in enumerate(d0.char_matrices):
-            # td = popgenstat.tajimas_d(cm)
-            td = 1
+            try:
+                td = popgenstat.tajimas_d(cm)
+            except ZeroDivisionError as e:
+                td = "N/A"
+            # td = 1
             sys.stderr.write("Locus {}: pi = {}, Tajima's D = {}\n".format(
                 cm_idx+1,
                 popgenstat.nucleotide_diversity(cm),
@@ -400,7 +406,7 @@ def main():
         manifest_entries.append(manifest_entry)
 
     out = _open_output_file_for_csv_writer(
-            filepath="{}_manifest.csv".format(args.title),
+            filepath="{}_manifest.csv".format(args.output_prefix),
             append=False)
     with out:
         writer = csv.DictWriter(
