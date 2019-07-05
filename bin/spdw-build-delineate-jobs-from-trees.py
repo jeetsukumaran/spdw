@@ -108,7 +108,9 @@ def main():
         raise NotImplementedError()
     else:
         species_lineage_label_map, lineage_species_label_map = spdwlib.build_tree_label_maps(lineage_tree=lineage_tree)
-        true_population_nodes = [nd for nd in lineage_tree
+        true_population_nodes = [nd for nd in lineage_tree if nd.annotations["true_population_id"] and nd.annotations["true_population_id"] is not "null"]
+        assert(true_population_nodes)
+        print(true_population_nodes)
         # species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints(
         #         lineage_tree=lineage_tree,
         #         orthospecies_tree=None,

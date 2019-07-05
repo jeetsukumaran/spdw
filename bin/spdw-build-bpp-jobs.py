@@ -118,8 +118,10 @@ def generate_contained_trees(
                 nd.taxon.true_population_label = parent_taxon.label
         containing_tree = pseudopopulation_tree
     else:
-        for t in containing_tree.taxon_namespace:
-            t.true_population_label = t.label
+        for nd in containing_tree.postorder_node_iter():
+            if nd.taxon is not Name:
+                nd.taxon.true_population_label = nd.taxon.label
+                nd.annotations["true_population_id"] = nd.taxon.label
     if contained_taxon_namespace is None:
         contained_taxon_namespace = dendropy.TaxonNamespace()
     contained_to_containing_map = {}

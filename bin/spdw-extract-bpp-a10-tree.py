@@ -105,6 +105,9 @@ def calculate_bpp_full_species_tree(
                 if xnd is gnd:
                     continue
                 xnd.edge.length = 1e-10
+            gnd.annotations["is_collapsed"] = False
+        else:
+            gnd.annotations["is_collapsed"] = True
     for nd in tree1.leaf_node_iter():
         nd.taxon = tree1.taxon_namespace.require_taxon(label=nd.label)
         nd.label = None
