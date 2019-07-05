@@ -170,6 +170,8 @@ def main():
                     species_complexes[species_label] = set(found_species_labels)
             terminal_clade_found_species[terminal_clade] = found_species_labels
         # print(species_complexes)
+
+        terminal_clade_species_names = {}
         for nd in terminal_clades:
             x1 = None
             for spp_label in terminal_clade_found_species[nd]:
@@ -177,6 +179,9 @@ def main():
                     x1 = species_complexes[spp_label]
                 else:
                     assert x1 == species_complexes[spp_label]
+            terminal_clade_species_names[nd] = "+".join(x1)
+
+        species_names = sorted(list(terminal_clade_species_names.values()))
 
         for nd in lineage_tree:
             if nd not in terminal_clades:
@@ -186,6 +191,7 @@ def main():
                 nd.annotations["population"] = nd.taxon.label
             else:
                 nd.annotations["population"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
+            nd.annotations["species"] = terminal_clade_species_names[nd]
 
         while True:
             selected_lineages = set()
@@ -211,9 +217,10 @@ def main():
                 print("Failed to meet condition")
         msg = ["Open terminal lineages:"]
         for nd in terminal_clades:
-            msg.append("  - [{}] {}".format(
+            msg.append("  - [{}] {} [SPP='{}']".format(
                 "UNCONSTRAINED" if nd in selected_lineages else " CONSTRAINED ",
-                nd.annotations["population"]))
+                nd.annotations["population"].value,
+                terminal_clade_species_names[nd]))
         _log("\n".join(msg))
         sys.exit(0)
         # species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints(
