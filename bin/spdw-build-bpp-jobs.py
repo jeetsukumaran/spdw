@@ -101,10 +101,14 @@ def generate_contained_trees(
     if num_subpopulation_lineages_per_population > 1:
         pseudopopulation_tree = dendropy.Tree(containing_tree)
         pseudopopulation_tree.taxon_namespace = dendropy.TaxonNamespace()
-        for parent_node in pseudopopulation_tree.leaf_node_iter():
+        for parent_node in pseudopopulation_tree.postorder_node_iter():
+            if not parent_node.is_leaf():
+                parent_node.annotations["true_population_id"] = "null"
+                continue
             parent_taxon = parent_node.taxon
             parent_node.taxon = None
-            parent_node.true_population_id = parent_taxon.label
+            # parent_node.label = parent_taxon.label
+            parent_node.annotations["true_population_id"] = parent_taxon.label
             for pidx in range(num_subpopulation_lineages_per_population):
                 # label = "{}.pseudo{}".format(parent_node.label, pidx)
                 nd = parent_node.new_child(edge_length=0.0)
@@ -229,7 +233,6 @@ def main():
                 extract_comment_metadata=True,
                 preserve_underscores=True,
                 )
-
 
         manifest_entry["speciation_initiation_from_orthospecies_rate"] = try_to_coerce_to_float(source_tree.annotations["speciation_initiation_from_orthospecies_rate"].value)
         manifest_entry["speciation_initiation_from_incipient_species_rate"] = try_to_coerce_to_float(source_tree.annotations["speciation_initiation_from_incipient_species_rate"].value)

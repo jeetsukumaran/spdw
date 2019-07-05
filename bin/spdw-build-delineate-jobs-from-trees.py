@@ -108,18 +108,18 @@ def main():
         raise NotImplementedError()
     else:
         species_lineage_label_map, lineage_species_label_map = spdwlib.build_tree_label_maps(lineage_tree=lineage_tree)
-        print(f"species: {species_lineage_label_map}")
-        species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints(
-                lineage_tree=lineage_tree,
-                orthospecies_tree=None,
-                constraint_type=args.constrain_partitions,
-                species_lineage_label_map=species_lineage_label_map,
-                lineage_species_label_map=lineage_species_label_map,
-                min_unconstrained_leaves=args.min_unconstrained_leaves,
-                max_unconstrained_leaves=args.max_unconstrained_leaves,
-                num_unconstrained_leaves=args.num_unconstrained_leaves,
-                rng=rng,
-                )
+        true_population_nodes = [nd for nd in lineage_tree
+        # species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints(
+        #         lineage_tree=lineage_tree,
+        #         orthospecies_tree=None,
+        #         constraint_type=args.constrain_partitions,
+        #         species_lineage_label_map=species_lineage_label_map,
+        #         lineage_species_label_map=lineage_species_label_map,
+        #         min_unconstrained_leaves=args.min_unconstrained_leaves,
+        #         max_unconstrained_leaves=args.max_unconstrained_leaves,
+        #         num_unconstrained_leaves=args.num_unconstrained_leaves,
+        #         rng=rng,
+        #         )
         print(f"constrained: {constrained_lineage_leaf_labels}")
         print(f"unconstrained: {unconstrained_lineage_leaf_labels}")
     assert args.constrain_partitions is not None
