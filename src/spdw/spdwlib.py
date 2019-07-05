@@ -44,8 +44,8 @@ class ColorMap(object):
 
 class ProtractedSpeciationTreeGenerator(object):
 
-    SPECIES_LABEL_FORMAT_TEMPLATE = "S{species_id}",
-    LINEAGE_LABEL_FORMAT_TEMPLATE = "S{species_id}.L{lineage_id}",
+    SPECIES_LABEL_FORMAT_TEMPLATE = "S{species_id}"
+    LINEAGE_LABEL_FORMAT_TEMPLATE = "S{species_id}.L{lineage_id}"
 
     @staticmethod
     def decompose_species_lineage_label(label):
