@@ -108,9 +108,33 @@ def main():
         raise NotImplementedError()
     else:
         species_lineage_label_map, lineage_species_label_map = spdwlib.build_tree_label_maps(lineage_tree=lineage_tree)
-        true_population_nodes = [nd for nd in lineage_tree if nd.annotations["true_population_id"] and nd.annotations["true_population_id"] is not "null"]
-        assert(true_population_nodes)
-        print(true_population_nodes)
+
+        # ensure if parent is collapsed, all children are collapsed
+        for gnd in lineage_tree.preorder_node_iter():
+            if gnd.parent_node is not None and gnd.parent_node.annotations["is_collapsed"].value:
+                gnd.annotations["is_collapsed"] = True
+
+        # identify the lowest nodes (closest to the tips) that are open, and
+        # add its children if the children are (a) leaves; or (b) themselves
+        # are closed --- indicating, essentially a tip
+        candidate_nodes = set()
+        for nd in lineage_tree.postorder_node_iter():
+            if nd.annotations["is_collapsed"].value:
+                continue
+            for child in nd.child_node_iter():
+                if child.is_leaf() or child.annotations["is_collapsed"].value:
+                    candidate_nodes.add(child)
+        for nd in lineage_tree:
+            if nd not in candidate_nodes:
+                nd.annotations["tag"] = "0"
+                continue
+            if nd.is_leaf():
+                nd.annotations["tag"] = nd.taxon.label
+            else:
+                nd.annotations["tag"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
+            print("Identified: {}".format(nd.annotations["tag"].value))
+        lineage_tree.write(path="x.tre", schema="nexus")
+        sys.exit(0)
         # species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints(
         #         lineage_tree=lineage_tree,
         #         orthospecies_tree=None,
@@ -122,8 +146,8 @@ def main():
         #         num_unconstrained_leaves=args.num_unconstrained_leaves,
         #         rng=rng,
         #         )
-        print(f"constrained: {constrained_lineage_leaf_labels}")
-        print(f"unconstrained: {unconstrained_lineage_leaf_labels}")
+        # print(f"constrained: {constrained_lineage_leaf_labels}")
+        # print(f"unconstrained: {unconstrained_lineage_leaf_labels}")
     assert args.constrain_partitions is not None
     config = {}
     config["species_leafset_constraints"] = species_leafset_constraints

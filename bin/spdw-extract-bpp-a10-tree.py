@@ -80,7 +80,7 @@ def calculate_bpp_full_species_tree(
                 len_to_add += subnode.edge.length
                 subnode = subnode.parent_node
             child_labels = [c.label for c in desc_tips]
-            nd.label = "_".join(child_labels)
+            nd.label = "+".join(child_labels)
             nd.edge.length += len_to_add
             nd.child_labels = child_labels
             nd.clear_child_nodes()
@@ -108,6 +108,9 @@ def calculate_bpp_full_species_tree(
             gnd.annotations["is_collapsed"] = True
         else:
             gnd.annotations["is_collapsed"] = False
+    for gnd in guide_tree.preorder_node_iter():
+        if gnd.parent_node is not None and gnd.parent_node.annotations["is_collapsed"].value:
+            gnd.annotations["is_collapsed"] = True
     for nd in tree1.leaf_node_iter():
         nd.taxon = tree1.taxon_namespace.require_taxon(label=nd.label)
         nd.label = None
