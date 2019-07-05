@@ -44,6 +44,14 @@ class ColorMap(object):
 
 class ProtractedSpeciationTreeGenerator(object):
 
+    SPECIES_LABEL_FORMAT_TEMPLATE = "S{species_id}",
+    LINEAGE_LABEL_FORMAT_TEMPLATE = "S{species_id}.L{lineage_id}",
+
+    @staticmethod
+    def decompose_species_lineage_label(label):
+        parts = label.split(".")
+        return parts[0], parts[1]
+
     def __init__(self, **kwargs):
         self.speciation_initiation_from_orthospecies_rate = kwargs.pop("splitting_rate", 0.01)
         self.speciation_initiation_from_incipient_species_rate = self.speciation_initiation_from_orthospecies_rate
@@ -62,8 +70,8 @@ class ProtractedSpeciationTreeGenerator(object):
             speciation_completion_rate=self.speciation_completion_rate,
             orthospecies_extinction_rate=self.orthospecies_extinction_rate,
             incipient_species_extinction_rate=self.incipient_species_extinction_rate,
-            species_label_format_template="S{species_id}",
-            lineage_label_format_template="S{species_id}.L{lineage_id}",
+            species_label_format_template=ProtractedSpeciationTreeGenerator.SPECIES_LABEL_FORMAT_TEMPLATE,
+            lineage_label_format_template=ProtractedSpeciationTreeGenerator.LINEAGE_LABEL_FORMAT_TEMPLATE,
             rng=self.rng,
             )
 
@@ -100,15 +108,27 @@ class ProtractedSpeciationTreeGenerator(object):
                     break
         return lineage_tree, orthospecies_tree
 
-def build_tree_label_maps(orthospecies_tree):
+def build_tree_label_maps(orthospecies_tree=None, lineage_tree=None):
     species_lineage_label_map = collections.OrderedDict()
     lineage_species_label_map = {}
-    for k in sorted([t.label for t in orthospecies_tree.taxon_namespace]):
-        species_lineage_label_map[k] = []
-    for ond in orthospecies_tree.leaf_node_iter():
-        species_lineage_label_map[ond.taxon.label] = sorted([lnd.taxon.label for lnd in ond.lineage_tree_nodes])
-        for lnd in ond.lineage_tree_nodes:
-            lineage_species_label_map[lnd.taxon.label] = ond.taxon.label
+    if orthospecies_tree is not None:
+        for k in sorted([t.label for t in orthospecies_tree.taxon_namespace]):
+            species_lineage_label_map[k] = []
+        for ond in orthospecies_tree.leaf_node_iter():
+            species_lineage_label_map[ond.taxon.label] = sorted([lnd.taxon.label for lnd in ond.lineage_tree_nodes])
+            for lnd in ond.lineage_tree_nodes:
+                lineage_species_label_map[lnd.taxon.label] = ond.taxon.label
+    elif lineage_tree is not None:
+        for taxon in lineage_tree.taxon_namespace:
+            label = taxon.label
+            species_id, lineage_id = ProtractedSpeciationTreeGenerator.decompose_species_lineage_label(label)
+            try:
+                species_lineage_label_map[species_id].append(label)
+            except KeyError:
+                species_lineage_label_map[species_id] = [label]
+            lineage_species_label_map[label] = species_id
+    else:
+        raise ValueError()
     return species_lineage_label_map, lineage_species_label_map
 
 def generate_constraints(
@@ -179,9 +199,8 @@ def generate_constraints(
             species_leafset_constraints.append(sorted(species_leafset_constraint_label_map[sp]))
     return species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map
 
-def decorate_tree(
+def decorate_lineage_tree(
         lineage_tree,
-        orthospecies_tree,
         lineage_species_label_map,
         unconstrained_lineage_leaf_labels,
         ):
@@ -231,6 +250,8 @@ def decorate_tree(
         # 'set legend.significantDigits=4;',
     #     ])
     lineage_tree.figtree_block = "begin figtree;\n{}\nend;\n".format("\n".join(lineage_tree_figtree_block))
+
+def decorate_orthospecies_tree(orthospecies_tree):
     orthospecies_tree_figtree_block = [
             'set appearance.branchLineWidth=5.0;',
             'set scaleBar.isShown=false;',

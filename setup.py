@@ -31,6 +31,7 @@ setup(
         "bin/compare-coalescent-vs-msc.sh",
         "bin/spdw-build-bpp-jobs.py",
         "bin/spdw-build-delineate-jobs.py",
+        "bin/spdw-build-delineate-jobs-from-trees.py",
         "bin/spdw-build-fsc26-run.py",
         "bin/spdw-evaluate-delineate-jobs.py",
         "bin/spdw-extract-bpp-a10-tree.py",
