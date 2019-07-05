@@ -117,27 +117,80 @@ def main():
         # identify the lowest nodes (closest to the tips) that are open, and
         # add its children if the children are (a) leaves; or (b) themselves
         # are closed --- indicating, essentially a tip
-        candidate_lineages = {}
+        terminal_clades = {}
         for nd in lineage_tree.postorder_node_iter():
             if nd.annotations["is_collapsed"].value:
                 continue
             for child in nd.child_node_iter():
                 if child.is_leaf():
-                    candidate_lineages[child] = set([child])
+                    terminal_clades[child] = set([child])
                 elif child.annotations["is_collapsed"].value:
-                    candidate_lineages[child] = set([desc for desc in nd.leaf_iter()])
+                    terminal_clades[child] = set([desc for desc in child.leaf_iter()])
+
         for nd in lineage_tree:
-            if nd not in candidate_lineages:
+            if nd not in terminal_clades:
                 nd.annotations["population"] = "0"
                 continue
             if nd.is_leaf():
                 nd.annotations["population"] = nd.taxon.label
             else:
                 nd.annotations["population"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
+            # print("{}: {}".format(nd.annotations["population"], len(terminal_clades[nd])))
+
+        ## Come up with species labels that take into account:
+        ## - a terminal clade may consist of a union of (true) species: S1, S2, etc.
+        ## - the same species may be associated with different terminal clades
+        ## - the same species may be mixed up with other species in different
+        ## - al clades (e.g., terminal clade A may include lineages associated
+        #         with species 1 and 2, while terminal clade B may include
+        #         associated with species 1 and 3. Here we come up with a nominal
+        #         species = S1+S2+S3 if S1, S2, and S3 are not found associated with
+        ##        any other species in any other terminal clade.
+        ## - a "species complex" are thus the most expansive set that does not exclude
+        ##   any pair of nominal species that occur together in any terminal clade
+        ## If each terminal clade consists of lineages of multiple nominal species;
+        terminal_clade_found_species = {}
+        species_complexes = {}
+        for terminal_clade in terminal_clades:
+            # print("---\n{}:".format(terminal_clade.annotations["population"]))
+            found_species_labels = set()
+            for lineage in terminal_clades[terminal_clade]:
+                if not lineage.is_leaf():
+                    continue
+                # print(lineage.taxon.label)
+                species_label, lineage_label = spdwlib.ProtractedSpeciationTreeGenerator.decompose_species_lineage_label(lineage.taxon.label)
+                found_species_labels.add(species_label)
+            # print(found_species_labels)
+            for species_label in found_species_labels:
+                if species_label in species_complexes:
+                    for ex2 in list(species_complexes[species_label]):
+                        species_complexes[ex2].update(found_species_labels)
+                    # species_complexes[species_label].update(found_species_labels)
+                else:
+                    species_complexes[species_label] = set(found_species_labels)
+            terminal_clade_found_species[terminal_clade] = found_species_labels
+        # print(species_complexes)
+        for nd in terminal_clades:
+            x1 = None
+            for spp_label in terminal_clade_found_species[nd]:
+                if x1 is None:
+                    x1 = species_complexes[spp_label]
+                else:
+                    assert x1 == species_complexes[spp_label]
+
+        for nd in lineage_tree:
+            if nd not in terminal_clades:
+                nd.annotations["population"] = "0"
+                continue
+            if nd.is_leaf():
+                nd.annotations["population"] = nd.taxon.label
+            else:
+                nd.annotations["population"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
+
         while True:
             selected_lineages = set()
             unconstrained_tip_lineages = set()
-            lineage_pool = list(candidate_lineages.keys())
+            lineage_pool = list(terminal_clades.keys())
             if args.min_unconstrained_leaves is None and args.num_unconstrained_leaves is None:
                 args.min_unconstrained_leaves = int(len(lineage_tree.taxon_namespace) / 2)
             if args.num_unconstrained_leaves is not None:
@@ -150,14 +203,14 @@ def main():
                 sys.exit("Need to specify '--min-unconstrained-leaves' or '--num-unconstrained-leaves'")
             while lineage_pool and not condition_fn():
                 node = lineage_pool.pop(rng.randint(0, len(lineage_pool)-1))
-                unconstrained_tip_lineages.update(candidate_lineages[node])
+                unconstrained_tip_lineages.update(terminal_clades[node])
                 selected_lineages.add(node)
             if condition_fn:
                 break
             else:
                 print("Failed to meet condition")
         msg = ["Open terminal lineages:"]
-        for nd in candidate_lineages:
+        for nd in terminal_clades:
             msg.append("  - [{}] {}".format(
                 "UNCONSTRAINED" if nd in selected_lineages else " CONSTRAINED ",
                 nd.annotations["population"]))
