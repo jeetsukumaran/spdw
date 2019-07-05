@@ -117,23 +117,51 @@ def main():
         # identify the lowest nodes (closest to the tips) that are open, and
         # add its children if the children are (a) leaves; or (b) themselves
         # are closed --- indicating, essentially a tip
-        candidate_nodes = set()
+        candidate_lineages = {}
         for nd in lineage_tree.postorder_node_iter():
             if nd.annotations["is_collapsed"].value:
                 continue
             for child in nd.child_node_iter():
-                if child.is_leaf() or child.annotations["is_collapsed"].value:
-                    candidate_nodes.add(child)
+                if child.is_leaf():
+                    candidate_lineages[child] = set([child])
+                elif child.annotations["is_collapsed"].value:
+                    candidate_lineages[child] = set([desc for desc in nd.leaf_iter()])
         for nd in lineage_tree:
-            if nd not in candidate_nodes:
-                nd.annotations["tag"] = "0"
+            if nd not in candidate_lineages:
+                nd.annotations["population"] = "0"
                 continue
             if nd.is_leaf():
-                nd.annotations["tag"] = nd.taxon.label
+                nd.annotations["population"] = nd.taxon.label
             else:
-                nd.annotations["tag"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
-            print("Identified: {}".format(nd.annotations["tag"].value))
-        lineage_tree.write(path="x.tre", schema="nexus")
+                nd.annotations["population"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
+        while True:
+            selected_lineages = set()
+            unconstrained_tip_lineages = set()
+            lineage_pool = list(candidate_lineages.keys())
+            if args.min_unconstrained_leaves is None and args.num_unconstrained_leaves is None:
+                args.min_unconstrained_leaves = int(len(lineage_tree.taxon_namespace) / 2)
+            if args.num_unconstrained_leaves is not None:
+                condition_fn = lambda: len(unconstrained_tip_lineages) == args.num_unconstrained_leaves
+            elif args.min_unconstrained_leaves is not None and args.max_unconstrained_leaves is not None:
+                condition_fn = lambda: len(unconstrained_tip_lineages) >= args.min_unconstrained_leaves and len(unconstrained_tip_lineages) <= args.max_unconstrained_leaves
+            elif args.min_unconstrained_leaves is not None:
+                condition_fn = lambda: len(unconstrained_tip_lineages) >= args.min_unconstrained_leaves
+            else:
+                sys.exit("Need to specify '--min-unconstrained-leaves' or '--num-unconstrained-leaves'")
+            while lineage_pool and not condition_fn():
+                node = lineage_pool.pop(rng.randint(0, len(lineage_pool)-1))
+                unconstrained_tip_lineages.update(candidate_lineages[node])
+                selected_lineages.add(node)
+            if condition_fn:
+                break
+            else:
+                print("Failed to meet condition")
+        msg = ["Open terminal lineages:"]
+        for nd in candidate_lineages:
+            msg.append("  - [{}] {}".format(
+                "UNCONSTRAINED" if nd in selected_lineages else " CONSTRAINED ",
+                nd.annotations["population"]))
+        _log("\n".join(msg))
         sys.exit(0)
         # species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints(
         #         lineage_tree=lineage_tree,
