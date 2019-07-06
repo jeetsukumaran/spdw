@@ -208,7 +208,7 @@ def main():
         # for speciation rate estimation; ignored by species partition estimation
         # for species partition estimation
         if args.constrain_partitions is not None:
-            species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints(
+            species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints_from_psm_trees(
                     lineage_tree=lineage_tree,
                     orthospecies_tree=orthospecies_tree,
                     constraint_type=args.constrain_partitions,

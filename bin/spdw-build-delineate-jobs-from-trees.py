@@ -9,6 +9,7 @@ import random
 import argparse
 import dendropy
 from dendropy.model import protractedspeciation
+from delineate import utility
 import datetime
 import socket
 from spdw import spdwlib
@@ -104,126 +105,43 @@ def main():
             path=args.population_tree_filepath,
             schema=args.schema)
 
+    terminal_population_clades = spdwlib.find_terminal_population_clades(lineage_tree)
+    terminal_population_clade_species_identities = spdwlib.identify_terminal_population_clade_species(terminal_population_clades)
     if args.constrain_partitions is "user":
         raise NotImplementedError()
     else:
-        species_lineage_label_map, lineage_species_label_map = spdwlib.build_tree_label_maps(lineage_tree=lineage_tree)
+        constraints = spdwlib.build_constraints(
+                terminal_population_clades=terminal_population_clades,
+                min_unconstrained_leaves=args.min_unconstrained_leaves,
+                max_unconstrained_leaves=args.max_unconstrained_leaves,
+                num_unconstrained_leaves=args.num_unconstrained_leaves,
+                rng=rng,
+                )
 
-        # ensure if parent is collapsed, all children are collapsed
-        for gnd in lineage_tree.preorder_node_iter():
-            if gnd.parent_node is not None and gnd.parent_node.annotations["is_collapsed"].value:
-                gnd.annotations["is_collapsed"] = True
+    population_nodes = sorted([nd for nd in terminal_population_clades], key=lambda nd: nd.annotations["population_id"].value)
+    species = ["'{}'".format(terminal_population_clade_species_identities[nd]) for nd in population_nodes]
+    constrained = ["constrained" if p in constraints["constrained_population_clades"] else "unconstrained" for p in population_nodes]
+    populations = ["'{}'".format(nd.annotations["population_id"].value) for nd in population_nodes]
+    msg = ["{} terminal population clades organized into {} species:".format(
+        len(population_nodes),
+        len(species),
+        )]
+    # species.insert(0, "Species")
+    # constrained.insert(0, "Status")
+    # populations.insert(0, "Population")
+    tbl = utility.compose_table(
+            columns=[species, constrained, populations],
+            header=["Species", "Status", "Population"],
+            prefixes=["", "", ""],
+            quoted=[False, False, False],
+            is_indexed=True,
+            indent="  ",
+            )
+    msg.append(tbl)
+    _log("\n".join(msg))
 
-        # identify the lowest nodes (closest to the tips) that are open, and
-        # add its children if the children are (a) leaves; or (b) themselves
-        # are closed --- indicating, essentially a tip
-        terminal_clades = {}
-        for nd in lineage_tree.postorder_node_iter():
-            if nd.annotations["is_collapsed"].value:
-                continue
-            for child in nd.child_node_iter():
-                if child.is_leaf():
-                    terminal_clades[child] = set([child])
-                elif child.annotations["is_collapsed"].value:
-                    terminal_clades[child] = set([desc for desc in child.leaf_iter()])
-
-        for nd in lineage_tree:
-            if nd not in terminal_clades:
-                nd.annotations["population"] = "0"
-                continue
-            if nd.is_leaf():
-                nd.annotations["population"] = nd.taxon.label
-            else:
-                nd.annotations["population"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
-            # print("{}: {}".format(nd.annotations["population"], len(terminal_clades[nd])))
-
-        ## Come up with species labels that take into account:
-        ## - a terminal clade may consist of a union of (true) species: S1, S2, etc.
-        ## - the same species may be associated with different terminal clades
-        ## - the same species may be mixed up with other species in different
-        ## - al clades (e.g., terminal clade A may include lineages associated
-        #         with species 1 and 2, while terminal clade B may include
-        #         associated with species 1 and 3. Here we come up with a nominal
-        #         species = S1+S2+S3 if S1, S2, and S3 are not found associated with
-        ##        any other species in any other terminal clade.
-        ## - a "species complex" are thus the most expansive set that does not exclude
-        ##   any pair of nominal species that occur together in any terminal clade
-        ## If each terminal clade consists of lineages of multiple nominal species;
-        terminal_clade_found_species = {}
-        species_complexes = {}
-        for terminal_clade in terminal_clades:
-            # print("---\n{}:".format(terminal_clade.annotations["population"]))
-            found_species_labels = set()
-            for lineage in terminal_clades[terminal_clade]:
-                if not lineage.is_leaf():
-                    continue
-                # print(lineage.taxon.label)
-                species_label, lineage_label = spdwlib.ProtractedSpeciationTreeGenerator.decompose_species_lineage_label(lineage.taxon.label)
-                found_species_labels.add(species_label)
-            # print(found_species_labels)
-            for species_label in found_species_labels:
-                if species_label in species_complexes:
-                    for ex2 in list(species_complexes[species_label]):
-                        species_complexes[ex2].update(found_species_labels)
-                    # species_complexes[species_label].update(found_species_labels)
-                else:
-                    species_complexes[species_label] = set(found_species_labels)
-            terminal_clade_found_species[terminal_clade] = found_species_labels
-        # print(species_complexes)
-
-        terminal_clade_species_names = {}
-        for nd in terminal_clades:
-            x1 = None
-            for spp_label in terminal_clade_found_species[nd]:
-                if x1 is None:
-                    x1 = species_complexes[spp_label]
-                else:
-                    assert x1 == species_complexes[spp_label]
-            terminal_clade_species_names[nd] = "+".join(x1)
-
-        species_names = sorted(list(terminal_clade_species_names.values()))
-
-        for nd in lineage_tree:
-            if nd not in terminal_clades:
-                nd.annotations["population"] = "0"
-                continue
-            if nd.is_leaf():
-                nd.annotations["population"] = nd.taxon.label
-            else:
-                nd.annotations["population"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
-            nd.annotations["species"] = terminal_clade_species_names[nd]
-
-        while True:
-            selected_lineages = set()
-            unconstrained_tip_lineages = set()
-            lineage_pool = list(terminal_clades.keys())
-            if args.min_unconstrained_leaves is None and args.num_unconstrained_leaves is None:
-                args.min_unconstrained_leaves = int(len(lineage_tree.taxon_namespace) / 2)
-            if args.num_unconstrained_leaves is not None:
-                condition_fn = lambda: len(unconstrained_tip_lineages) == args.num_unconstrained_leaves
-            elif args.min_unconstrained_leaves is not None and args.max_unconstrained_leaves is not None:
-                condition_fn = lambda: len(unconstrained_tip_lineages) >= args.min_unconstrained_leaves and len(unconstrained_tip_lineages) <= args.max_unconstrained_leaves
-            elif args.min_unconstrained_leaves is not None:
-                condition_fn = lambda: len(unconstrained_tip_lineages) >= args.min_unconstrained_leaves
-            else:
-                sys.exit("Need to specify '--min-unconstrained-leaves' or '--num-unconstrained-leaves'")
-            while lineage_pool and not condition_fn():
-                node = lineage_pool.pop(rng.randint(0, len(lineage_pool)-1))
-                unconstrained_tip_lineages.update(terminal_clades[node])
-                selected_lineages.add(node)
-            if condition_fn:
-                break
-            else:
-                print("Failed to meet condition")
-        msg = ["Open terminal lineages:"]
-        for nd in terminal_clades:
-            msg.append("  - [{}] {} [SPP='{}']".format(
-                "UNCONSTRAINED" if nd in selected_lineages else " CONSTRAINED ",
-                nd.annotations["population"].value,
-                terminal_clade_species_names[nd]))
-        _log("\n".join(msg))
-        sys.exit(0)
-        # species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints(
+    sys.exit(1)
+        # species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints_from_psm_trees(
         #         lineage_tree=lineage_tree,
         #         orthospecies_tree=None,
         #         constraint_type=args.constrain_partitions,

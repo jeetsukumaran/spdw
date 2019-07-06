@@ -4,6 +4,7 @@
 import random
 from dendropy.model import protractedspeciation
 import collections
+import itertools
 
 class ColorMap(object):
 
@@ -131,7 +132,7 @@ def build_tree_label_maps(orthospecies_tree=None, lineage_tree=None):
         raise ValueError()
     return species_lineage_label_map, lineage_species_label_map
 
-def generate_constraints(
+def generate_constraints_from_psm_trees(
         lineage_tree,
         orthospecies_tree,
         constraint_type,
@@ -198,6 +199,157 @@ def generate_constraints(
         if sp in species_leafset_constraint_label_map:
             species_leafset_constraints.append(sorted(species_leafset_constraint_label_map[sp]))
     return species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map
+
+def find_terminal_population_clades(tree):
+    """
+    Takes a tree with nodes *annotated" to indicate whether or not they should
+    be collapsed and identifies the set of 'terminal population clades'.
+
+    'Terminal population clades' are substrees descending from nodes with no
+    ancestors in a collapsed state AND either: (a) no child nodes [i.e., a
+    leaf] or (b) no descendent nodes in a non-collapsed or open states.
+    Nodes corresponding to terminal populations themselves are, by definition,
+    need to in a collapsed state unless they are leaves.
+
+    Returns a dictionary mapping terminal population nodes to leaf nodes descending
+    from the terminal population nodes.
+    """
+    # ensure if parent is collapsed, all children are collapsed
+    for gnd in tree.preorder_node_iter():
+        if gnd.parent_node is not None and gnd.parent_node.annotations["is_collapsed"].value:
+            gnd.annotations["is_collapsed"] = True
+    # identify the lowest nodes (closest to the tips) that are open, and
+    # add its children if the children are (a) leaves; or (b) themselves
+    # are closed
+    terminal_population_clades = {}
+    for nd in tree.postorder_node_iter():
+        if nd.annotations["is_collapsed"].value:
+            continue
+        for child in nd.child_node_iter():
+            if child.is_leaf():
+                terminal_population_clades[child] = set([child])
+            elif child.annotations["is_collapsed"].value:
+                terminal_population_clades[child] = set([desc for desc in child.leaf_iter()])
+    for nd in tree:
+        if nd not in terminal_population_clades:
+            nd.annotations["population_id"] = "0"
+            continue
+        if nd.is_leaf():
+            nd.annotations["population_id"] = nd.taxon.label
+        else:
+            nd.annotations["population_id"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
+        # print("{}: {}".format(nd.annotations["population"], len(terminal_population_clades[nd])))
+    return terminal_population_clades
+
+def identify_terminal_population_clade_species(terminal_population_clades):
+    """
+    Following population lineages being collapsed in an upstream analysis due
+    to the structuring not being supported by the data, we may find lineages
+    from two or more (true) nominal species have been collapsed together due to
+    estimation error. This means that the original labeling / species
+    identities cannot be used, and we need to establish new species
+    identities.
+
+    The criteria we shall use is that the new species identities comprise of
+    the union of all species identities that are found together in the same
+    collapsed population across all population.
+
+    If lineages assigned to species "S1" and "S2" are collapsed into one
+    population, while in another population we find lineages associated with
+    species "S1" and "S3", and in no other population does "S1", "S2", and "S3"
+    found with any other species except each other, then we establish a new
+    species identity, "S1+S2+S3". All lineages associated with "S1", "S2", or
+    "S3" are now referred to "S1+S2+S3". If it turns out that there is another
+    population where are lineage assigned to "S3" and "S5" co-occurs, then the
+    new species identity is "S1+S2+S3+S5", and all lineages associated with
+    "S1", "S2", "S3", or "S5" are assigned to this new species.
+    """
+    terminal_population_clade_found_species = {}
+    species_complexes = {}
+    for terminal_population_clade in terminal_population_clades:
+        found_species_labels = set()
+        for lineage in terminal_population_clades[terminal_population_clade]:
+            if not lineage.is_leaf():
+                continue
+            species_label, lineage_label = ProtractedSpeciationTreeGenerator.decompose_species_lineage_label(lineage.taxon.label)
+            found_species_labels.add(species_label)
+        for species_label in found_species_labels:
+            if species_label in species_complexes:
+                for ex2 in list(species_complexes[species_label]):
+                    species_complexes[ex2].update(found_species_labels)
+            else:
+                species_complexes[species_label] = set(found_species_labels)
+        terminal_population_clade_found_species[terminal_population_clade] = found_species_labels
+    terminal_population_clade_species_identities = {}
+    for nd in terminal_population_clades:
+        x1 = None
+        for spp_label in terminal_population_clade_found_species[nd]:
+            if x1 is None:
+                x1 = species_complexes[spp_label]
+            else:
+                assert x1 == species_complexes[spp_label]
+        terminal_population_clade_species_identities[nd] = "+".join(x1)
+    species_names = sorted(list(terminal_population_clade_species_identities.values()))
+    return terminal_population_clade_species_identities
+
+def build_constraints(
+        terminal_population_clades,
+        min_unconstrained_leaves=None,
+        max_unconstrained_leaves=None,
+        num_unconstrained_leaves=None,
+        max_tries=100,
+        rng=None,
+        ):
+    if rng is None:
+        rng = random.Random()
+    num_tries = 0
+    while True:
+        num_tries += 1
+        unconstrained_population_clades = set()
+        unconstrained_lineages = set()
+        lineage_pool = list(terminal_population_clades.keys())
+        if min_unconstrained_leaves is None and num_unconstrained_leaves is None:
+            lineages = list(itertools.chain.from_iterable(terminal_population_clades.values()))
+            min_unconstrained_leaves = int(len(lineages) / 2)
+        if num_unconstrained_leaves is not None:
+            condition_fn = lambda: len(unconstrained_lineages) == num_unconstrained_leaves
+        elif min_unconstrained_leaves is not None and max_unconstrained_leaves is not None:
+            condition_fn = lambda: len(unconstrained_lineages) >= min_unconstrained_leaves and len(unconstrained_lineages) <= max_unconstrained_leaves
+        elif min_unconstrained_leaves is not None:
+            condition_fn = lambda: len(unconstrained_lineages) >= min_unconstrained_leaves
+        else:
+            sys.exit("Need to specify '--min-unconstrained-leaves' or '--num-unconstrained-leaves'")
+        while lineage_pool and not condition_fn():
+            node = lineage_pool.pop(rng.randint(0, len(lineage_pool)-1))
+            unconstrained_lineages.update(terminal_population_clades[node])
+            unconstrained_population_clades.add(node)
+        if condition_fn:
+            break
+        else:
+            print("Failed to meet condition (try {} of {})".format(num_tries, max_tries))
+            if num_tries == max_tries:
+                raise RunTimeError("Failed to meet constraint conditions within maximum try limit")
+    constrained_population_clades = set([nd for nd in terminal_population_clades if nd not in unconstrained_population_clades])
+    constrained_lineages = set(itertools.chain.from_iterable(terminal_population_clades[nd] for nd in constrained_population_clades))
+    return {
+            "constrained_population_clades": constrained_population_clades,
+            "constrained_lineages": constrained_lineages,
+            "unconstrained_population_clades": unconstrained_population_clades,
+            "unconstrained_lineages": unconstrained_lineages,
+            }
+
+def decorate_constrained_collapsed_lineage_tree(
+        lineage_tree,
+        terminal_clades):
+    for nd in lineage_tree:
+        if nd not in terminal_clades:
+            nd.annotations["population"] = "0"
+            continue
+        if nd.is_leaf():
+            nd.annotations["population"] = nd.taxon.label
+        else:
+            nd.annotations["population"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
+        nd.annotations["species"] = terminal_clade_species_identities[nd]
 
 def decorate_lineage_tree(
         lineage_tree,
