@@ -12,6 +12,7 @@ from dendropy.model import protractedspeciation
 import datetime
 import socket
 from spdw import spdwlib
+import itertools
 
 def _log(msg):
     sys.stderr.write("- {}\n".format(msg))
@@ -52,7 +53,7 @@ def main():
             choices=["nexus", "newick"],
             help="Input trees format [default: $(default)s].")
     parser.add_argument("-o", "--output-prefix",
-            default="bpprun",
+            default="delineate-run",
             help="Run title (default: '%(default)s')")
     parser.add_argument("-z", "--random-seed",
             type=int,
@@ -130,6 +131,22 @@ def main():
             )
     _log(msg)
 
+    config_table = []
+    for lineage_nd in itertools.chain(constraints["constrained_lineages"], constraints["unconstrained_lineages"]):
+        population_nd = lineage_population_clade_map[lineage_nd]
+        row = {
+                "lineage": lineage_nd.taxon.label,
+                "species": terminal_population_clade_species_identities[population_nd],
+                "status": "1" if lineage_nd in constraints["constrained_lineages"] else "0"
+        }
+        config_table.append(row)
+    out_fpath = "{}.delineate-config.tsv".format(args.output_prefix)
+    delimiter = "\t"
+    header_row = list(config_table[0].keys())
+    with open(out_fpath, "w") as out:
+        out.write("{}\n".format(delimiter.join(header_row)))
+        for row in config_table:
+            out.write("{}\n".format(delimiter.join(row[k] for k in header_row)))
     sys.exit(1)
         # species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints_from_psm_trees(
         #         lineage_tree=lineage_tree,
