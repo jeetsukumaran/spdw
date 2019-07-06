@@ -8,8 +8,8 @@ import collections
 import random
 import argparse
 import dendropy
+from dendropy.utility import textprocessing
 from dendropy.model import protractedspeciation
-from delineate import utility
 import datetime
 import socket
 from spdw import spdwlib
@@ -119,25 +119,21 @@ def main():
                 )
 
     population_nodes = sorted([nd for nd in terminal_population_clades], key=lambda nd: nd.annotations["population_id"].value)
-    species = ["'{}'".format(terminal_population_clade_species_identities[nd]) for nd in population_nodes]
-    constrained = ["constrained" if p in constraints["constrained_population_clades"] else "unconstrained" for p in population_nodes]
-    populations = ["'{}'".format(nd.annotations["population_id"].value) for nd in population_nodes]
-    msg = ["{} terminal population clades organized into {} species:".format(
+    table = []
+    for nd in population_nodes:
+        row = {
+                "population": nd.annotations["population_id"].value,
+                "species": terminal_population_clade_species_identities[nd],
+                "status": "constrained" if nd in constraints["constrained_population_clades"] else "unconstrained",
+        }
+        table.append(row)
+    msg = ["{} terminal population clades, {} organized into {} species and {} of unknown identity:".format(
         len(population_nodes),
-        len(species),
+        len(constraints["constrained_population_clades"]),
+        len(set(terminal_population_clade_species_identities.values())),
+        len(constraints["unconstrained_population_clades"]),
         )]
-    # species.insert(0, "Species")
-    # constrained.insert(0, "Status")
-    # populations.insert(0, "Population")
-    tbl = utility.compose_table(
-            columns=[species, constrained, populations],
-            header=["Species", "Status", "Population"],
-            prefixes=["", "", ""],
-            quoted=[False, False, False],
-            is_indexed=True,
-            indent="  ",
-            )
-    msg.append(tbl)
+    msg.append(textprocessing.format_dict_table(rows=table))
     _log("\n".join(msg))
 
     sys.exit(1)
