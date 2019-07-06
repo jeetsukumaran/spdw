@@ -147,30 +147,8 @@ def main():
         out.write("{}\n".format(delimiter.join(header_row)))
         for row in config_table:
             out.write("{}\n".format(delimiter.join(row[k] for k in header_row)))
-    sys.exit(1)
-        # species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints_from_psm_trees(
-        #         lineage_tree=lineage_tree,
-        #         orthospecies_tree=None,
-        #         constraint_type=args.constrain_partitions,
-        #         species_lineage_label_map=species_lineage_label_map,
-        #         lineage_species_label_map=lineage_species_label_map,
-        #         min_unconstrained_leaves=args.min_unconstrained_leaves,
-        #         max_unconstrained_leaves=args.max_unconstrained_leaves,
-        #         num_unconstrained_leaves=args.num_unconstrained_leaves,
-        #         rng=rng,
-        #         )
-        # print(f"constrained: {constrained_lineage_leaf_labels}")
-        # print(f"unconstrained: {unconstrained_lineage_leaf_labels}")
-    assert args.constrain_partitions is not None
-    config = {}
-    config["species_leafset_constraints"] = species_leafset_constraints
-    spdwlib.decorate_lineage_tree(
-            lineage_tree=lineage_tree,
-            lineage_species_label_map=lineage_species_label_map,
-            unconstrained_lineage_leaf_labels=unconstrained_lineage_leaf_labels,
-            )
-    lineage_tree.write(path="{}.lineages.nex".format(args.output_prefix),
-            supplemental_blocks=[lineage_tree.figtree_block],
+    lineage_tree.write(
+            path="{}.delineate-input-tree.nex".format(args.output_prefix),
             schema="nexus")
 
 if __name__ == '__main__':
