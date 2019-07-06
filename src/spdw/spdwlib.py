@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import random
+from dendropy.utility import textprocessing
 from dendropy.model import protractedspeciation
 import collections
 import itertools
@@ -337,6 +338,31 @@ def build_constraints(
             "unconstrained_population_clades": unconstrained_population_clades,
             "unconstrained_lineages": unconstrained_lineages,
             }
+
+def format_constraint_report(
+        constraints,
+        terminal_population_clades,
+        terminal_population_clade_species_identities,
+        ):
+    population_nodes = sorted([nd for nd in terminal_population_clades], key=lambda nd: nd.annotations["population_id"].value)
+    table = []
+    for nd in population_nodes:
+        row = {
+                "population": nd.annotations["population_id"].value,
+                "species": terminal_population_clade_species_identities[nd],
+                "status": "constrained" if nd in constraints["constrained_population_clades"] else "unconstrained",
+        }
+        table.append(row)
+    msg = ["{} terminal population clades, {} organized into {} species and {} of unknown identity:".format(
+        len(population_nodes),
+        len(constraints["constrained_population_clades"]),
+        len(set(terminal_population_clade_species_identities.values())),
+        len(constraints["unconstrained_population_clades"]),
+        )]
+    tbl = textprocessing.format_dict_table_rows(rows=table)
+    for row in tbl:
+        msg.append("  {}".format(row))
+    return "\n".join(msg)
 
 def decorate_constrained_collapsed_lineage_tree(
         lineage_tree,

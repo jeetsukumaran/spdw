@@ -8,7 +8,6 @@ import collections
 import random
 import argparse
 import dendropy
-from dendropy.utility import textprocessing
 from dendropy.model import protractedspeciation
 import datetime
 import socket
@@ -117,24 +116,12 @@ def main():
                 num_unconstrained_leaves=args.num_unconstrained_leaves,
                 rng=rng,
                 )
-
-    population_nodes = sorted([nd for nd in terminal_population_clades], key=lambda nd: nd.annotations["population_id"].value)
-    table = []
-    for nd in population_nodes:
-        row = {
-                "population": nd.annotations["population_id"].value,
-                "species": terminal_population_clade_species_identities[nd],
-                "status": "constrained" if nd in constraints["constrained_population_clades"] else "unconstrained",
-        }
-        table.append(row)
-    msg = ["{} terminal population clades, {} organized into {} species and {} of unknown identity:".format(
-        len(population_nodes),
-        len(constraints["constrained_population_clades"]),
-        len(set(terminal_population_clade_species_identities.values())),
-        len(constraints["unconstrained_population_clades"]),
-        )]
-    msg.append(textprocessing.format_dict_table(rows=table))
-    _log("\n".join(msg))
+    msg = spdwlib.format_constraint_report(
+            constraints=constraints,
+            terminal_population_clades=terminal_population_clades,
+            terminal_population_clade_species_identities=terminal_population_clade_species_identities,
+            )
+    _log(msg)
 
     sys.exit(1)
         # species_leafset_constraints, constrained_lineage_leaf_labels, unconstrained_lineage_leaf_labels, species_leafset_constraint_label_map = spdwlib.generate_constraints_from_psm_trees(
