@@ -104,22 +104,29 @@ def main():
             path=args.population_tree_filepath,
             schema=args.schema)
 
-    terminal_population_clades = spdwlib.find_terminal_population_clades(lineage_tree)
+    terminal_population_clades, lineage_population_clade_map = spdwlib.find_terminal_population_clades(lineage_tree)
     terminal_population_clade_species_identities = spdwlib.identify_terminal_population_clade_species(terminal_population_clades)
     if args.constrain_partitions is "user":
         raise NotImplementedError()
     else:
-        constraints = spdwlib.build_constraints(
+        constraints = spdwlib.generate_constraints_from_collapsed_tree(
                 terminal_population_clades=terminal_population_clades,
                 min_unconstrained_leaves=args.min_unconstrained_leaves,
                 max_unconstrained_leaves=args.max_unconstrained_leaves,
                 num_unconstrained_leaves=args.num_unconstrained_leaves,
                 rng=rng,
                 )
-    msg = spdwlib.format_constraint_report(
-            constraints=constraints,
-            terminal_population_clades=terminal_population_clades,
-            terminal_population_clade_species_identities=terminal_population_clade_species_identities,
+        msg = spdwlib.format_population_clade_constraint_report(
+                constraints=constraints,
+                terminal_population_clades=terminal_population_clades,
+                terminal_population_clade_species_identities=terminal_population_clade_species_identities,
+                )
+        _log(msg)
+    msg = spdwlib.format_lineage_constraint_report(
+                constraints=constraints,
+                lineage_population_clade_map=lineage_population_clade_map,
+                terminal_population_clades=terminal_population_clades,
+                terminal_population_clade_species_identities=terminal_population_clade_species_identities,
             )
     _log(msg)
 

@@ -223,14 +223,18 @@ def find_terminal_population_clades(tree):
     # add its children if the children are (a) leaves; or (b) themselves
     # are closed
     terminal_population_clades = {}
+    lineage_population_clade_map = {}
     for nd in tree.postorder_node_iter():
         if nd.annotations["is_collapsed"].value:
             continue
         for child in nd.child_node_iter():
             if child.is_leaf():
                 terminal_population_clades[child] = set([child])
+                lineage_population_clade_map[child] = child
             elif child.annotations["is_collapsed"].value:
                 terminal_population_clades[child] = set([desc for desc in child.leaf_iter()])
+                for lnd in terminal_population_clades[child]:
+                    lineage_population_clade_map[lnd] = child
     for nd in tree:
         if nd not in terminal_population_clades:
             nd.annotations["population_id"] = "0"
@@ -240,7 +244,7 @@ def find_terminal_population_clades(tree):
         else:
             nd.annotations["population_id"] = "+".join(desc.taxon.label for desc in nd.leaf_iter())
         # print("{}: {}".format(nd.annotations["population"], len(terminal_population_clades[nd])))
-    return terminal_population_clades
+    return terminal_population_clades, lineage_population_clade_map
 
 def identify_terminal_population_clade_species(terminal_population_clades):
     """
@@ -293,7 +297,7 @@ def identify_terminal_population_clade_species(terminal_population_clades):
     species_names = sorted(list(terminal_population_clade_species_identities.values()))
     return terminal_population_clade_species_identities
 
-def build_constraints(
+def generate_constraints_from_collapsed_tree(
         terminal_population_clades,
         min_unconstrained_leaves=None,
         max_unconstrained_leaves=None,
@@ -339,7 +343,7 @@ def build_constraints(
             "unconstrained_lineages": unconstrained_lineages,
             }
 
-def format_constraint_report(
+def format_population_clade_constraint_report(
         constraints,
         terminal_population_clades,
         terminal_population_clade_species_identities,
@@ -348,9 +352,9 @@ def format_constraint_report(
     table = []
     for nd in population_nodes:
         row = {
-                "population": nd.annotations["population_id"].value,
-                "species": terminal_population_clade_species_identities[nd],
-                "status": "constrained" if nd in constraints["constrained_population_clades"] else "unconstrained",
+                "Population": nd.annotations["population_id"].value,
+                "Species": terminal_population_clade_species_identities[nd],
+                "Status": "constrained" if nd in constraints["constrained_population_clades"] else "unconstrained",
         }
         table.append(row)
     msg = ["{} terminal population clades, {} organized into {} species and {} of unknown identity:".format(
@@ -359,8 +363,42 @@ def format_constraint_report(
         len(set(terminal_population_clade_species_identities.values())),
         len(constraints["unconstrained_population_clades"]),
         )]
-    tbl = textprocessing.format_dict_table_rows(rows=table)
-    for row in tbl:
+    formatted_table_rows = textprocessing.format_dict_table_rows(rows=table)
+    for row in formatted_table_rows:
+        msg.append("  {}".format(row))
+    return "\n".join(msg)
+
+def format_lineage_constraint_report(
+        constraints,
+        lineage_population_clade_map,
+        terminal_population_clades,
+        terminal_population_clade_species_identities,
+        ):
+    table = []
+    constrained_lineages = constraints["constrained_lineages"]
+    unconstrained_lineages = constraints["unconstrained_lineages"]
+    for lineage_nd in lineage_population_clade_map:
+        population_nd = lineage_population_clade_map[lineage_nd]
+        if lineage_nd in constraints["constrained_lineages"]:
+            status = "constrained"
+        else:
+            status = "unconstrained"
+        row = {
+                "Deme": lineage_nd.taxon.label,
+                "Population":  population_nd.annotations["population_id"].value,
+                "Species": terminal_population_clade_species_identities[population_nd],
+                "Status": status,
+                }
+        table.append(row)
+    formatted_table_rows= textprocessing.format_dict_table_rows(rows=table)
+    msg = ["{} sub-population lineages organized into {} populations and {} species, with {} sub-population lineages of unknown species affinities:".format(
+        len(lineage_population_clade_map),
+        len(terminal_population_clades),
+        len(set(terminal_population_clade_species_identities.values())),
+        len(constrained_lineages),
+        len(unconstrained_lineages),
+        )]
+    for row in formatted_table_rows:
         msg.append("  {}".format(row))
     return "\n".join(msg)
 
