@@ -140,7 +140,7 @@ def main():
                 "status": "1" if lineage_nd in constraints["constrained_lineages"] else "0"
         }
         config_table.append(row)
-    out_fpath = "{}.delineate-config.tsv".format(args.output_prefix)
+    out_fpath = "{}.tsv".format(args.output_prefix)
     delimiter = "\t"
     header_row = list(config_table[0].keys())
     with open(out_fpath, "w") as out:
@@ -148,7 +148,7 @@ def main():
         for row in config_table:
             out.write("{}\n".format(delimiter.join(row[k] for k in header_row)))
     lineage_tree.write(
-            path="{}.delineate-input-tree.nex".format(args.output_prefix),
+            path="{}.tree.nex".format(args.output_prefix),
             schema="nexus")
 
 if __name__ == '__main__':
