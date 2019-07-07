@@ -397,6 +397,7 @@ def main():
         jobf.write("#$ -S /bin/bash\n")
         jobf.write("#$ -l h_vmem=12G\n")
         jobf.write("#$ -l virtual_free=12G\n")
+        jobf.write("set -e -o pipefail\n")
         jobf.write("bpp --cfile {}\n".format(bpp_ctl_filepath))
         jobf.write("spdw-extract-bpp-a10-tree.py -p {population_probability_threshold} -o {job_title}.results.summary {job_title}.results.out.txt {job_title}.guide-tree.nex\n".format(
             population_probability_threshold=args.population_probability_threshold,
