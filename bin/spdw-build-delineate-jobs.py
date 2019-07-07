@@ -45,10 +45,10 @@ def main():
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--title",
+    parser.add_argument("-o", "--output-prefix",
             action="store",
             default="delineate-test",
-            help="Title of run [default=%(default)s].")
+            help="Prefix of output files [default=%(default)s].")
     parser.add_argument("--splitting-rate",
             action="store",
             type=float,
@@ -187,7 +187,7 @@ def main():
             min_extant_orthospecies=args.min_extant_orthospecies,
             rng=rng,
             )
-    output_prefix = "{}_spr{:0.3f}_".format(args.title, true_speciation_completion_rate)
+    output_prefix = "{}_spr{:0.3f}_".format(args.output_prefix, true_speciation_completion_rate)
     tree_idx = 0
     for tree_idx in range(args.num_replicates):
         lineage_tree, orthospecies_tree = psm.generate_sample()

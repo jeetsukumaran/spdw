@@ -200,9 +200,15 @@ def main():
             # default=0.00001,
             default=1e-8,
             help="Per-site mutation rate (default: %(default)s).")
-    parser.add_argument("--no-scale-tree-by-mutation-rate",
+    data_options.add_argument("--no-scale-tree-by-mutation-rate",
             action="store_true",
             help="Do not scale tree by mutation rate.")
+    summary_options = parser.add_argument_group("Summary Options")
+    summary_options.add_argument("-p", "--population-probability-threshold",
+            action="store",
+            type=float,
+            default=0.95,
+            help="Mininum probability of splits to include when summarizing tree (default=%(default)s)")
     args = parser.parse_args()
 
     if args.random_seed is None:
@@ -373,6 +379,10 @@ def main():
         jobf.write("#$ -l h_vmem=12G\n")
         jobf.write("#$ -l virtual_free=12G\n")
         jobf.write("bpp --cfile {}\n".format(bpp_ctl_filepath))
+        jobf.write("spdw-extract-bpp-a10-tree.py -p {population_probability_threshold} -o {job_title}.results.summary {job_title}.results.out.txt {job_title}.guide-tree.nex\n".format(
+            population_probability_threshold=args.population_probability_threshold,
+            job_title=job_title,
+            ))
 
         manifest_entry["source_tree_path"] = filepath
         manifest_entry["results_filepath"] = out_filepath

@@ -26,7 +26,7 @@ def extract_bpp_output_posterior_guide_tree_string(source_text):
 def calculate_bpp_full_species_tree(
         src_tree_string,
         guide_tree,
-        minimum_species_probability_threshold=0.95):
+        population_probability_threshold=0.95):
     # Logic:
     # - Any internal node label is assumed to be a bpp annotation in the
     #   form of "#<float>" indicating the posterior probability of the node.
@@ -69,7 +69,7 @@ def calculate_bpp_full_species_tree(
         nd = nodes_to_process.pop(0)
         if nd.is_leaf():
             pass
-        elif nd.pp < minimum_species_probability_threshold:
+        elif nd.pp < population_probability_threshold:
             desc_tips = []
             for sub_nd in nd.leaf_iter():
                 desc_tips.append(sub_nd)
@@ -133,10 +133,10 @@ def main():
             action="store",
             default="bpp_a01",
             help="Prefix for output files (default=%(default)s).")
-    parser.add_argument("-p", "--minimum_species_probability_threshold",
+    parser.add_argument("-p", "--population-probability-threshold",
             action="store",
             type=float,
-            default=0.96,
+            default=0.95,
             help="Mininum probability of splits to include (default=%(default)s)")
 
     args = parser.parse_args()
@@ -148,7 +148,7 @@ def main():
     guide_tree, relabeled_tree = calculate_bpp_full_species_tree(
             src_tree_string=posterior_guide_tree_string,
             guide_tree=guide_tree,
-            minimum_species_probability_threshold=args.minimum_species_probability_threshold)
+            population_probability_threshold=args.population_probability_threshold)
     guide_tree.write(path="{}.collapsed.nex".format(args.output_prefix),
             schema="nexus")
     relabeled_tree.write(path="{}.relabeled.nex".format(args.output_prefix),

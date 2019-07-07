@@ -90,8 +90,16 @@ def main():
             min_extant_orthospecies=args.min_extant_orthospecies,
             rng=rng,
             )
+    root_ages = []
+    num_lineages = []
+    num_species = []
     for tree_idx in range(args.num_replicates):
         lineage_tree, orthospecies_tree = psm.generate_sample()
+        lineage_tree.calc_node_ages()
+        print("Root age: {} ({} lineages, {} species))".format(lineage_tree.seed_node.age, len(lineage_tree.taxon_namespace), len(orthospecies_tree.taxon_namespace)))
+        root_ages.append(lineage_tree.seed_node.age)
+        num_lineages.append(len(lineage_tree.taxon_namespace))
+        num_species.append(len(orthospecies_tree.taxon_namespace))
         output_prefix = "{}{:03d}".format(args.output_prefix, tree_idx+1)
         lineage_tree.write(
                 path="{}.lineage.tre".format(output_prefix),
@@ -99,6 +107,10 @@ def main():
         orthospecies_tree.write(
                 path="{}.orthospecies.tre".format(output_prefix),
                 schema=args.output_format)
+    print("---")
+    print("          Mean root age: {}".format(sum(root_ages)/len(root_ages)))
+    print("Mean number of lineages: {}".format(sum(num_lineages)/len(num_lineages)))
+    print(" Mean number of species: {}".format(sum(num_species)/len(num_species)))
 
 if __name__ == '__main__':
     main()
