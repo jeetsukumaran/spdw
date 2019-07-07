@@ -93,12 +93,12 @@ def generate_contained_trees(
         containing_tree,
         contained_taxon_namespace=None,
         population_size=1,
-        num_subpopulation_lineages_per_population=1,
-        num_individuals_per_subpopulation_lineage=4,
+        num_subpopulation_lineages_per_population_fn=None,
+        num_individuals_per_terminal_lineage=4,
         num_gene_trees=5,
         rng=None):
     assert len(containing_tree.taxon_namespace) > 0
-    if num_subpopulation_lineages_per_population > 1:
+    if num_subpopulation_lineages_per_population_fn is not None:
         pseudopopulation_tree = dendropy.Tree(containing_tree)
         pseudopopulation_tree.taxon_namespace = dendropy.TaxonNamespace()
         for parent_node in pseudopopulation_tree.postorder_node_iter():
@@ -109,7 +109,7 @@ def generate_contained_trees(
             parent_node.taxon = None
             # parent_node.label = parent_taxon.label
             parent_node.annotations["true_population_id"] = parent_taxon.label
-            for pidx in range(num_subpopulation_lineages_per_population):
+            for pidx in range(num_subpopulation_lineages_per_population_fn()):
                 # label = "{}.pseudo{}".format(parent_node.label, pidx)
                 nd = parent_node.new_child(edge_length=0.0)
                 # pseudopopulation_label = "{}.pseudopop{}".format(parent_taxon.label, pidx+1)
@@ -127,7 +127,7 @@ def generate_contained_trees(
     contained_to_containing_map = {}
     pop_samples = collections.Counter()
     for sp_idx, sp_tax in enumerate(containing_tree.taxon_namespace):
-        for gidx in range(num_individuals_per_subpopulation_lineage):
+        for gidx in range(num_individuals_per_terminal_lineage):
             pop_samples[sp_tax.true_population_label] += 1
             sample_idx = pop_samples[sp_tax.true_population_label]
             glabel = "{sp}_i{ind}^{sp}_i{ind}".format(
@@ -178,15 +178,21 @@ def main():
             default=1e6,
             help="Population size (default: %(default)s).")
     data_options.add_argument(
-            "--num-subpopulation-lineages-per-population",
-            "--num-subpopulations",
+            "--min-subpopulation-lineages-per-population",
+            "--min-subpopulations",
             type=int,
-            default=1,
-            help="In guide tree passed to BPP, divide individuals from single populations into multiple nominal populations (with no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
-    data_options.add_argument("--num-individuals-per-subpopulation-lineage",
+            default=0,
+            help="In guide tree passed to BPP, divide individuals from single populations into at least this number of multiple nominal populations (with no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
+    data_options.add_argument(
+            "--max-subpopulation-lineages-per-population",
+            "--max-subpopulations",
+            type=int,
+            default=0,
+            help="In guide tree passed to BPP, divide individuals from single populations into at most this number of multiple nominal populations (with no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
+    data_options.add_argument("--num-individuals-per-terminal-lineage",
             type=int,
             default=4,
-            help="Number of individuals sampled per subpopulation lineage within each population (default: %(default)s).")
+            help="Number of individuals sampled per terminal lineage within each population (default: %(default)s).")
     data_options.add_argument("--num-loci-per-individual",
             type=int,
             default=10,
@@ -253,16 +259,29 @@ def main():
         manifest_entry["num_extant_orthospecies"] = try_to_coerce_to_float(source_tree.annotations["num_extant_orthospecies"].value)
         manifest_entry["source_tree_type"] = source_tree.annotations["tree_type"].value
         manifest_entry["population_size"] = args.population_size
-        manifest_entry["num_subpopulation_lineages_per_population"] = args.num_subpopulation_lineages_per_population
-        manifest_entry["num_individuals_per_subpopulation_lineage"] = args.num_individuals_per_subpopulation_lineage
+        manifest_entry["min_subpopulation_lineages_per_population"] = args.min_subpopulation_lineages_per_population
+        manifest_entry["max_subpopulation_lineages_per_population"] = args.max_subpopulation_lineages_per_population
+        manifest_entry["num_individuals_per_terminal_lineage"] = args.num_individuals_per_terminal_lineage
         manifest_entry["num_loci_per_individual"] = args.num_loci_per_individual
         manifest_entry["mutation_rate_per_site"] = args.mutation_rate_per_site
+
+        if args.min_subpopulation_lineages_per_population > args.max_subpopulation_lineages_per_population:
+            sys.exit("Minimum number of subpopulation lineages must be greater than maximum number of subpopulation lineages")
+        elif args.min_subpopulation_lineages_per_population < 0:
+            sys.exit("Number of subpopulation lineages cannot be negative")
+        elif args.min_subpopulation_lineages_per_population == args.max_subpopulation_lineages_per_population:
+            if args.min_subpopulation_lineages_per_population <= 1:
+                num_subpopulation_lineages_per_population_fn = lambda: 1
+            else:
+                num_subpopulation_lineages_per_population_fn = lambda: args.min_subpopulation_lineages_per_population
+        else:
+            num_subpopulation_lineages_per_population_fn = lambda:rng.randint(args.min_subpopulation_lineages_per_population, args.max_subpopulation_lineages_per_population)
 
         source_tree.calc_node_ages()
         population_tree, gene_trees = generate_contained_trees(
                 containing_tree=source_tree,
-                num_subpopulation_lineages_per_population=args.num_subpopulation_lineages_per_population,
-                num_individuals_per_subpopulation_lineage=args.num_individuals_per_subpopulation_lineage,
+                num_subpopulation_lineages_per_population_fn=num_subpopulation_lineages_per_population_fn,
+                num_individuals_per_terminal_lineage=args.num_individuals_per_terminal_lineage,
                 num_gene_trees=args.num_loci_per_individual,
                 population_size=args.population_size,
                 rng=rng,
@@ -322,7 +341,7 @@ def main():
 
         num_populations = len(population_tree.taxon_namespace)
         population_labels = " ".join(t.label for t in population_tree.taxon_namespace)
-        num_individuals_per_population = " ".join(str(args.num_individuals_per_subpopulation_lineage) for i in range(len(population_tree.taxon_namespace)))
+        num_individuals_per_population = " ".join(str(args.num_individuals_per_terminal_lineage) for i in range(len(population_tree.taxon_namespace)))
         # num_individuals_per_population = " ".join(str(t.num_individuals_sampled) for t in population_tree.taxon_namespace)
         num_input_lineages = len(population_labels)
 
