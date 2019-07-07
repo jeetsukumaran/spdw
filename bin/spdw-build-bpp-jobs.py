@@ -119,7 +119,7 @@ def generate_contained_trees(
         containing_tree = pseudopopulation_tree
     else:
         for nd in containing_tree.postorder_node_iter():
-            if nd.taxon is not Name:
+            if nd.taxon is not None:
                 nd.taxon.true_population_label = nd.taxon.label
                 nd.annotations["true_population_id"] = nd.taxon.label
     if contained_taxon_namespace is None:
