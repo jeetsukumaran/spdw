@@ -109,13 +109,26 @@ def generate_contained_trees(
             parent_node.taxon = None
             # parent_node.label = parent_taxon.label
             parent_node.annotations["true_population_id"] = parent_taxon.label
-            for pidx in range(num_subpopulation_lineages_per_population_fn()):
-                # label = "{}.pseudo{}".format(parent_node.label, pidx)
-                nd = parent_node.new_child(edge_length=0.0)
-                # pseudopopulation_label = "{}.pseudopop{}".format(parent_taxon.label, pidx+1)
-                pseudopopulation_label = "{}.sub{}".format(parent_taxon.label, pidx+1)
-                nd.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
-                nd.taxon.true_population_label = parent_taxon.label
+            num_subpops = num_subpopulation_lineages_per_population_fn()
+            if num_subpops == 1:
+                pseudopopulation_label = "{}.sub1".format(parent_taxon.label)
+                parent_node.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
+                parent_node.taxon.true_population_label = parent_taxon.label
+            else:
+                subtree = birthdeath.birth_death_tree(
+                        num_extant_tips=num_subpops,
+                        birth_rate=1.0,
+                        death_rate=0.0)
+                subtree_leaf_idx = 0
+                for subtree_node in subtree.postorder_node_iter():
+                    subtree_node.edge.length = 0.0
+                    if subtree_node.parent_node is subtree.seed_node:
+                        parent_node.add_child(subtree_node)
+                    if subtree_node.is_leaf():
+                        subtree_leaf_idx += 1
+                        pseudopopulation_label = "{}.sub{}".format(parent_taxon.label, subtree_leaf_idx+1)
+                        subtree_node.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
+                        subtree_node.taxon.true_population_label = parent_taxon.label
         containing_tree = pseudopopulation_tree
     else:
         for nd in containing_tree.postorder_node_iter():
