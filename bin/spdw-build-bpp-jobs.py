@@ -39,9 +39,6 @@ sites, less than 1 difference per kb. A sensible diffuse prior is then ''thetapr
 with mean 0.001.
 """
 
-# p ../../../bin/spdw-build-delineate-jobs.py --splitting-rate 0.1 --speciation-completion-rate 1 -t delineate -n 1 --num-extant-lineages 5 --constrain-partitions random --max-unconstrained-leaves 2 --write-extra
-# p ../../../bin/spdw-build-bpp-jobs.py --num-loci 1 --num-ind 2 --num-char 500 delineate_spr1.000_.0001.demo.lineages.nex
-
 BPP_TEMPLATE = """\
 
           seed =  -1
@@ -253,7 +250,6 @@ def main():
     filepaths.extend(args.source_trees)
     for idx, filepath in enumerate(filepaths):
         job_title = "{}_{:05d}".format(args.output_prefix, idx+1)
-        manifest_entry = collections.OrderedDict()
         _log("{} of {}: {}: {}".format(idx+1, len(filepaths), job_title, filepath))
         source_tree = dendropy.Tree.get(
                 path=filepath,
@@ -261,23 +257,6 @@ def main():
                 extract_comment_metadata=True,
                 preserve_underscores=True,
                 )
-
-        manifest_entry["speciation_initiation_from_orthospecies_rate"] = try_to_coerce_to_float(source_tree.annotations["speciation_initiation_from_orthospecies_rate"].value)
-        manifest_entry["speciation_initiation_from_incipient_species_rate"] = try_to_coerce_to_float(source_tree.annotations["speciation_initiation_from_incipient_species_rate"].value)
-        manifest_entry["speciation_completion_rate"] = try_to_coerce_to_float(source_tree.annotations["speciation_completion_rate"].value)
-        manifest_entry["orthospecies_extinction_rate"] = try_to_coerce_to_float(source_tree.annotations["orthospecies_extinction_rate"].value)
-        manifest_entry["incipient_species_extinction_rate"] = try_to_coerce_to_float(source_tree.annotations["incipient_species_extinction_rate"].value)
-        manifest_entry["max_time"] = try_to_coerce_to_float(source_tree.annotations["max_time"].value)
-        manifest_entry["max_extant_orthospecies"] = try_to_coerce_to_float(source_tree.annotations["max_extant_orthospecies"].value)
-        manifest_entry["num_extant_lineages"] = try_to_coerce_to_float(source_tree.annotations["num_extant_lineages"].value)
-        manifest_entry["num_extant_orthospecies"] = try_to_coerce_to_float(source_tree.annotations["num_extant_orthospecies"].value)
-        manifest_entry["source_tree_type"] = source_tree.annotations["tree_type"].value
-        manifest_entry["population_size"] = args.population_size
-        manifest_entry["min_subpopulation_lineages_per_population"] = args.min_subpopulation_lineages_per_population
-        manifest_entry["max_subpopulation_lineages_per_population"] = args.max_subpopulation_lineages_per_population
-        manifest_entry["num_individuals_per_terminal_lineage"] = args.num_individuals_per_terminal_lineage
-        manifest_entry["num_loci_per_individual"] = args.num_loci_per_individual
-        manifest_entry["mutation_rate_per_site"] = args.mutation_rate_per_site
 
         if args.min_subpopulation_lineages_per_population > args.max_subpopulation_lineages_per_population:
             sys.exit("Minimum number of subpopulation lineages must be greater than maximum number of subpopulation lineages")
@@ -359,14 +338,6 @@ def main():
         # num_individuals_per_population = " ".join(str(t.num_individuals_sampled) for t in population_tree.taxon_namespace)
         num_input_lineages = len(population_labels)
 
-        manifest_entry["num_input_lineages"] = num_input_lineages
-        manifest_entry["theta"] = theta_prior_mean
-        manifest_entry["theta_prior_a"] = theta_prior_a
-        manifest_entry["theta_prior_b"] = theta_prior_b
-        manifest_entry["root_age"] = population_tree.seed_node.age
-        manifest_entry["tau_prior_a"] = tau_prior_a
-        manifest_entry["tau_prior_b"] = tau_prior_b
-
         bpp_guide_tree = population_tree.as_string(
                 schema="newick",
                 suppress_leaf_taxon_labels=False,
@@ -417,25 +388,6 @@ def main():
             population_probability_threshold=args.population_probability_threshold,
             job_title=job_title,
             ))
-
-        manifest_entry["source_tree_path"] = filepath
-        manifest_entry["results_filepath"] = out_filepath
-        manifest_entry["mcmc_filepath"] = mcmc_filepath
-        manifest_entries.append(manifest_entry)
-
-    out = _open_output_file_for_csv_writer(
-            filepath="{}_manifest.csv".format(args.output_prefix),
-            append=False)
-    with out:
-        writer = csv.DictWriter(
-                out,
-                fieldnames=manifest_entries[0].keys(),
-                restval="NA",
-                delimiter=",",
-                lineterminator=os.linesep,
-                )
-        writer.writeheader()
-        writer.writerows(manifest_entries)
 
 if __name__ == "__main__":
     main()
