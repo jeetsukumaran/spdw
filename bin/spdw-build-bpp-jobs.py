@@ -6,7 +6,7 @@ import sys
 import collections
 import csv
 import re
-
+import platform
 import random
 import collections
 import argparse
@@ -224,6 +224,10 @@ def main():
             type=float,
             default=0.95,
             help="Mininum probability of splits to include when summarizing tree (default=%(default)s)")
+    job_options = parser.add_argument_group("Job Options")
+    job_options.add_argument("--job-preamble",
+            metavar="JOB-PREAMBLE-FILE",
+            help="Path to file with job preamble (commands to insert in job file before main operations).")
     args = parser.parse_args()
 
     if args.random_seed is None:
@@ -373,14 +377,17 @@ def main():
         f.write(bpp_config)
         f.write("\n")
 
-        jobf = open("{}.job.sge".format(job_title), "w")
-        jobf.write("#! /bin/bash\n")
-        jobf.write("#$ -cwd\n")
-        jobf.write("#$ -V\n")
-        jobf.write("#$ -S /bin/bash\n")
-        jobf.write("#$ -l h_vmem=12G\n")
-        jobf.write("#$ -l virtual_free=12G\n")
+        jobf = open("{}.job".format(job_title), "w")
+        jobf.write("#! /bin/bash\n\n")
         jobf.write("set -e -o pipefail\n")
+        if args.job_preamble:
+            with open(os.path.expanduser(os.path.expandvars(args.job_preamble))) as job_preamble_src:
+                jobf.write(job_preamble_src.read())
+        # jobf.write("#$ -cwd\n")
+        # jobf.write("#$ -V\n")
+        # jobf.write("#$ -S /bin/bash\n")
+        # jobf.write("#$ -l h_vmem=12G\n")
+        # jobf.write("#$ -l virtual_free=12G\n")
         jobf.write("bpp --cfile {}\n".format(bpp_ctl_filepath))
         jobf.write("spdw-extract-bpp-a10-tree.py -p {population_probability_threshold} -o {job_title}.results.summary {job_title}.results.out.txt {job_title}.guide-tree.nex\n".format(
             population_probability_threshold=args.population_probability_threshold,
