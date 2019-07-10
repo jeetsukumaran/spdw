@@ -124,7 +124,7 @@ def generate_contained_trees(
                         parent_node.add_child(subtree_node)
                     if subtree_node.is_leaf():
                         subtree_leaf_idx += 1
-                        pseudopopulation_label = "{}.sub{}".format(parent_taxon.label, subtree_leaf_idx+1)
+                        pseudopopulation_label = "{}.sub{}".format(parent_taxon.label, subtree_leaf_idx)
                         subtree_node.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
                         subtree_node.taxon.true_population_label = parent_taxon.label
         containing_tree = pseudopopulation_tree
@@ -190,13 +190,11 @@ def main():
             help="Population size (default: %(default)s).")
     data_options.add_argument(
             "--min-subpopulation-lineages-per-population",
-            "--min-subpopulations",
             type=int,
             default=0,
             help="In guide tree passed to BPP, divide individuals from single populations into at least this number of multiple nominal populations (with no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
     data_options.add_argument(
             "--max-subpopulation-lineages-per-population",
-            "--max-subpopulations",
             type=int,
             default=0,
             help="In guide tree passed to BPP, divide individuals from single populations into at most this number of multiple nominal populations (with no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
