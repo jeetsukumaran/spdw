@@ -91,6 +91,7 @@ def generate_contained_trees(
         contained_taxon_namespace=None,
         population_size=1,
         num_subpopulation_lineages_per_population_fn=None,
+        subpopulation_root_age=None,
         num_individuals_per_terminal_lineage=4,
         num_gene_trees=5,
         rng=None):
@@ -111,14 +112,20 @@ def generate_contained_trees(
                 pseudopopulation_label = "{}.sub1".format(parent_taxon.label)
                 parent_node.taxon = pseudopopulation_tree.taxon_namespace.require_taxon(label=pseudopopulation_label)
                 parent_node.taxon.true_population_label = parent_taxon.label
+                parent_node.edge.length += subpopulation_root_age
             else:
                 subtree = birthdeath.birth_death_tree(
                         num_extant_tips=num_subpops,
-                        birth_rate=1.0,
+                        birth_rate=0.1,
                         death_rate=0.0)
+                # print(subtree.as_string("newick"))
+                subtree.calc_node_ages()
+                original_root_age = subtree.seed_node.age + subtree.seed_node.edge.length
+                for subtree_node in subtree.postorder_node_iter():
+                    subtree_node.age = (subtree_node.age / original_root_age) * subpopulation_root_age
+                subtree.set_edge_lengths_from_node_ages(error_on_negative_edge_lengths=True)
                 subtree_leaf_idx = 0
                 for subtree_node in subtree.postorder_node_iter():
-                    subtree_node.edge.length = 0.0
                     subtree_node.annotations["true_population_id"] = parent_taxon.label
                     if subtree_node.parent_node is subtree.seed_node:
                         parent_node.add_child(subtree_node)
@@ -187,7 +194,7 @@ def main():
     data_options.add_argument("--population-size",
             type=float,
             default=1e6,
-            help="Population size (default: %(default)s).")
+            help="Population size [default: %(default)s].")
     data_options.add_argument(
             "--min-subpopulation-lineages-per-population",
             type=int,
@@ -198,23 +205,28 @@ def main():
             type=int,
             default=0,
             help="In guide tree passed to BPP, divide individuals from single populations into at most this number of multiple nominal populations (with no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
+    data_options.add_argument(
+            "--subpopulation-root-age",
+            type=float,
+            default=1e-10,
+            help="Determines the amount of structuring in subpopulations; set to 0 for no structure at all [default: %(default)s].")
     data_options.add_argument("--num-individuals-per-terminal-lineage",
             type=int,
             default=4,
-            help="Number of individuals sampled per terminal lineage within each population (default: %(default)s).")
+            help="Number of individuals sampled per terminal lineage within each population [default: %(default)s].")
     data_options.add_argument("--num-loci-per-individual",
             type=int,
             default=10,
-            help="Number of loci sampled per individual (default: %(default)s).")
+            help="Number of loci sampled per individual [default: %(default)s].")
     data_options.add_argument("--num-characters-per-locus",
             type=int,
             default=1000,
-            help="Number of characters sampled per locus (default: %(default)s).")
+            help="Number of characters sampled per locus [default: %(default)s].")
     data_options.add_argument("--mutation-rate-per-site",
             type=float,
             # default=0.00001,
             default=1e-8,
-            help="Per-site mutation rate (default: %(default)s).")
+            help="Per-site mutation rate [default: %(default)s].")
     data_options.add_argument("--no-scale-tree-by-mutation-rate",
             action="store_true",
             help="Do not scale tree by mutation rate.")
@@ -276,6 +288,7 @@ def main():
         population_tree, gene_trees = generate_contained_trees(
                 containing_tree=source_tree,
                 num_subpopulation_lineages_per_population_fn=num_subpopulation_lineages_per_population_fn,
+                subpopulation_root_age=args.subpopulation_root_age,
                 num_individuals_per_terminal_lineage=args.num_individuals_per_terminal_lineage,
                 num_gene_trees=args.num_loci_per_individual,
                 population_size=args.population_size,
