@@ -54,27 +54,32 @@ def main():
     regime_group.add_argument("--num-extant-lineages",
             default=None,
             type=int,
-            help="Source trees generated with exactly this number of tip lineages (incipient species + orthospecies).")
+            help="Trees generated with exactly this number of tip lineages (incipient species + orthospecies).")
     regime_group.add_argument("--min-extant-lineages",
             default=None,
             type=int,
-            help="Source trees generated with at least this number of tip lineages (incipient species + orthospecies).")
+            help="Trees generated with at least this number of tip lineages (incipient species + orthospecies).")
+    regime_group.add_argument("--max-extant-lineages",
+            default=None,
+            type=int,
+            help="Trees generated with no more than this number of tip lineages (incipient species + orthospecies).")
     regime_group.add_argument("--num-extant-orthospecies",
             default=None,
             type=int,
-            help="Source trees generated with this number of orthospecies ('good' or true species).")
+            help="Trees generated with this number of orthospecies ('good' or true species).")
     regime_group.add_argument("--min-extant-orthospecies",
             default=2,
             type=int,
             help="Reject source trees with less than this number of orthospecies ('good' or true species).")
+    regime_group.add_argument("--max-extant-orthospecies",
+            default=None,
+            type=int,
+            help="Reject source trees with more than this number of orthospecies ('good' or true species).")
     args = parser.parse_args()
-    selected_condition = None
+    selected_conditions = {}
     for kw in ("max_time", "num_extant_lineages", "num_extant_orthospecies"):
-        if getattr(args, kw) is not None:
-            if selected_condition:
-                sys.exit("Need to specify only one of: '--max-time', '--num-extant-lineages', '--num-extant-orthospecies'")
-            selected_condition = kw
-    if selected_condition is None:
+        selected_conditions[kw] = getattr(args, kw)
+    if selected_conditions is None:
         sys.exit("Need to specify at least one of: '--max-time', '--num-extant-lineages', '--num-extant-orthospecies'")
     if args.random_seed is None:
         args.random_seed = random.randrange(sys.maxsize)
@@ -86,8 +91,10 @@ def main():
             max_time=args.max_time,
             num_extant_lineages=args.num_extant_lineages,
             min_extant_lineages=args.min_extant_lineages,
+            max_extant_lineages=args.max_extant_lineages,
             num_extant_orthospecies=args.num_extant_orthospecies,
             min_extant_orthospecies=args.min_extant_orthospecies,
+            max_extant_orthospecies=args.max_extant_orthospecies,
             rng=rng,
             )
     root_ages = []

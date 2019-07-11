@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import sys
 import random
 from dendropy.utility import textprocessing
 from dendropy.model import protractedspeciation
@@ -63,8 +64,10 @@ class ProtractedSpeciationTreeGenerator(object):
         self.max_time = kwargs.pop("max_time", None)
         self.num_extant_lineages = kwargs.pop("num_extant_lineages", None)
         self.min_extant_lineages = kwargs.pop("min_extant_lineages", None)
+        self.max_extant_lineages = kwargs.pop("max_extant_lineages", None)
         self.num_extant_orthospecies = kwargs.pop("num_extant_orthospecies", None)
-        self.min_extant_orthospecies = kwargs.pop("min_extant_orthospecies", 2)
+        self.min_extant_orthospecies = kwargs.pop("min_extant_orthospecies", None)
+        self.max_extant_orthospecies = kwargs.pop("max_extant_orthospecies", None)
         self.rng = kwargs.pop("rng", random.Random())
         self.psm = protractedspeciation.ProtractedSpeciationProcess(
             speciation_initiation_from_orthospecies_rate=self.speciation_initiation_from_orthospecies_rate,
@@ -78,21 +81,16 @@ class ProtractedSpeciationTreeGenerator(object):
             )
 
     def generate_sample(self,):
-        selected_condition = None
-        for kw in (self.max_time, self.num_extant_lineages, self.num_extant_orthospecies):
-            if kw is not None:
-                if selected_condition:
-                    sys.exit("Need to specify only one of: 'max_time', 'num_extant_lineages', 'num_extant_orthospecies'")
-                selected_condition = kw
-        if selected_condition is None:
-            sys.exit("Need to specify at least one of: 'max_time', 'num_extant_lineages', 'num_extant_orthospecies'")
-
         while True:
             # make sure that the tree we generate has enough species
             lineage_tree, orthospecies_tree = self.psm.generate_sample(
                     max_time=self.max_time,
                     num_extant_lineages=self.num_extant_lineages,
+                    min_extant_lineages=self.min_extant_lineages,
+                    max_extant_lineages=self.max_extant_lineages,
                     num_extant_orthospecies=self.num_extant_orthospecies,
+                    min_extant_orthospecies=self.min_extant_orthospecies,
+                    max_extant_orthospecies=self.max_extant_orthospecies,
                     )
             if len(orthospecies_tree.taxon_namespace) >= self.min_extant_orthospecies:
                 ok = []
