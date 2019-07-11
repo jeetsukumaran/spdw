@@ -199,12 +199,12 @@ def main():
             "--min-subpopulation-lineages-per-population",
             type=int,
             default=0,
-            help="In guide tree passed to BPP, divide individuals from single populations into at least this number of multiple nominal populations (with no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
+            help="In guide tree passed to BPP, divide individuals from single populations into at least this number of multiple nominal populations (with minimal to no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
     data_options.add_argument(
             "--max-subpopulation-lineages-per-population",
             type=int,
             default=0,
-            help="In guide tree passed to BPP, divide individuals from single populations into at most this number of multiple nominal populations (with no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
+            help="In guide tree passed to BPP, divide individuals from single populations into at most this number of multiple nominal populations (with minimal to no structure between them), allowing BPP to collapse these (default: %(default)s; i.e. do not create multiple subpopulation_lineages).")
     data_options.add_argument(
             "--subpopulation-root-age",
             type=float,
