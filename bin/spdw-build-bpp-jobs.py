@@ -66,8 +66,8 @@ BPP_TEMPLATE = """\
 
      cleandata = 0    * remove sites with ambiguity data (1:yes, 0:no)?
 
-    thetaprior = {theta_prior_a} {theta_prior_b}   # invgamma(a, b) for theta, mean = {theta_prior_mean}
-      tauprior = {tau_prior_a}   {tau_prior_b}       # invgamma(a, b) for root tau & Dirichlet(a) for other tau's, mean = {tau_prior_mean}; root age (raw, unscaled) = {root_age}
+    thetaprior = {theta_prior_a} {theta_prior_b}
+      tauprior = {tau_prior_a}   {tau_prior_b}
 
       finetune =  1: 3 0.003 0.002 0.00002 0.005 0.9 0.001 0.001 # finetune for GBtj, GBspr, theta, tau, mix
 
@@ -329,23 +329,27 @@ def main():
 
         out_filepath = "{}.results.out.txt".format(job_title)
         mcmc_filepath = "{}.results.mcmc.txt".format(job_title)
-        # Inverse Gamma Prior
-        # IG(a,b), with mean given by b/(a-1)
-        # So,
-        #   thetaprior 3 0.002
-        # has a mean of
-        #   0.002/(3-1) = 0.001
-        theta_prior_mean = args.population_size * 4 * args.mutation_rate_per_site
+        # # Inverse Gamma Prior
+        # # IG(a,b), with mean given by b/(a-1)
+        # # So,
+        # #   thetaprior 3 0.002
+        # # has a mean of
+        # #   0.002/(3-1) = 0.001
+        # theta_prior_mean = args.population_size * 4 * args.mutation_rate_per_site
+        # theta_prior_a = 3.0
+        # theta_prior_b = theta_prior_mean * (theta_prior_a - 1)
+        # if args.no_scale_tree_by_mutation_rate:
+        #     tau_prior_mean = population_tree.seed_node.age
+        # else:
+        #     # tau_prior_mean = population_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
+        #     tau_prior_mean = population_tree.seed_node.age * args.mutation_rate_per_site * (1.0 / (args.num_loci_per_individual * args.num_characters_per_locus))
+        #     # tau_prior_mean = population_tree.seed_node.age / 100000
+        # tau_prior_a = 3.0
+        # tau_prior_b = tau_prior_mean * (tau_prior_a - 1)
         theta_prior_a = 3.0
-        theta_prior_b = theta_prior_mean * (theta_prior_a - 1)
-        if args.no_scale_tree_by_mutation_rate:
-            tau_prior_mean = population_tree.seed_node.age
-        else:
-            # tau_prior_mean = population_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
-            tau_prior_mean = population_tree.seed_node.age * args.mutation_rate_per_site * (1.0 / (args.num_loci_per_individual * args.num_characters_per_locus))
-            # tau_prior_mean = population_tree.seed_node.age / 100000
+        theta_prior_b = 0.02
         tau_prior_a = 3.0
-        tau_prior_b = tau_prior_mean * (tau_prior_a - 1)
+        tau_prior_b = 0.02
 
         num_populations = len(population_tree.taxon_namespace)
         population_labels = " ".join(t.label for t in population_tree.taxon_namespace)
@@ -376,14 +380,14 @@ def main():
                 population_labels=population_labels,
                 num_individuals_per_population=num_individuals_per_population,
                 bpp_guide_tree=bpp_guide_tree,
-                theta_prior_mean=theta_prior_mean,
+                # theta_prior_mean=theta_prior_mean,
                 theta_prior_a=theta_prior_a,
                 theta_prior_b=theta_prior_b,
-                tau_prior_mean=tau_prior_mean,
+                # tau_prior_mean=tau_prior_mean,
                 tau_prior_a=tau_prior_a,
                 tau_prior_b=tau_prior_b,
                 num_loci=args.num_loci_per_individual,
-                root_age=population_tree.seed_node.age
+                # root_age=population_tree.seed_node.age
                 )
         bpp_ctl_filepath = "{}.input.bpp.ctl".format(job_title)
         f = open(bpp_ctl_filepath, "w")
