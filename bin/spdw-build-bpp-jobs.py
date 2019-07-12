@@ -208,7 +208,7 @@ def main():
     data_options.add_argument(
             "--subpopulation-root-age",
             type=float,
-            default=1e-10,
+            default=0,
             help="Determines the amount of structuring in subpopulations; set to 0 for no structure at all [default: %(default)s].")
     data_options.add_argument("--num-individuals-per-terminal-lineage",
             type=int,
