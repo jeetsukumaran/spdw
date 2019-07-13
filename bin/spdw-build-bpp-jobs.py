@@ -66,6 +66,13 @@ BPP_TEMPLATE = """\
 
      cleandata = 0    * remove sites with ambiguity data (1:yes, 0:no)?
 
+    *  Optimized Priors:
+    *      thetaprior = {optimized_theta_prior_a} {optimized_theta_prior_b} * Mean = {optimized_theta_prior_mean}
+    *      tauprior = {optimized_tau_prior_a} {optimized_tau_prior_b} * Mean = {optimized_tau_prior_mean};
+    *      * Root age = {root_age}; N = {population_size}; mu = {mutation_rate_per_site};
+    *  Default Priors:
+    *      thetaprior = {default_theta_prior_a} {default_tau_prior_b}
+    *      tauprior = {default_tau_prior_a} {default_tau_prior_b}
     thetaprior = {theta_prior_a} {theta_prior_b}
       tauprior = {tau_prior_a}   {tau_prior_b}
 
@@ -190,6 +197,11 @@ def main():
     parser.add_argument("-o", "--output-prefix",
             default="bpprun",
             help="Run title (default: '%(default)s')")
+    analysis_options = parser.add_argument_group("Analysis Options")
+    parser.add_argument("--default-priors",
+            dest="is_use_informative_priors",
+            action="store_false",
+            help="Use default priors instead of optimizing for (known) true value.")
     data_options = parser.add_argument_group("Data Options")
     data_options.add_argument("--population-size",
             type=float,
@@ -284,7 +296,6 @@ def main():
         else:
             num_subpopulation_lineages_per_population_fn = lambda:rng.randint(args.min_subpopulation_lineages_per_population, args.max_subpopulation_lineages_per_population)
 
-        source_tree.calc_node_ages()
         population_tree, gene_trees = generate_contained_trees(
                 containing_tree=source_tree,
                 num_subpopulation_lineages_per_population_fn=num_subpopulation_lineages_per_population_fn,
@@ -294,6 +305,7 @@ def main():
                 population_size=args.population_size,
                 rng=rng,
                 )
+        population_tree.calc_node_ages()
         gene_trees.write(
                 path="{}.gene-trees.nex".format(job_title),
                 schema="nexus")
@@ -329,28 +341,42 @@ def main():
 
         out_filepath = "{}.results.out.txt".format(job_title)
         mcmc_filepath = "{}.results.mcmc.txt".format(job_title)
-        # # Inverse Gamma Prior
-        # # IG(a,b), with mean given by b/(a-1)
-        # # So,
-        # #   thetaprior 3 0.002
-        # # has a mean of
-        # #   0.002/(3-1) = 0.001
-        # theta_prior_mean = args.population_size * 4 * args.mutation_rate_per_site
-        # theta_prior_a = 3.0
-        # theta_prior_b = theta_prior_mean * (theta_prior_a - 1)
-        # if args.no_scale_tree_by_mutation_rate:
-        #     tau_prior_mean = population_tree.seed_node.age
-        # else:
-        #     # tau_prior_mean = population_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
-        #     tau_prior_mean = population_tree.seed_node.age * args.mutation_rate_per_site * (1.0 / (args.num_loci_per_individual * args.num_characters_per_locus))
-        #     # tau_prior_mean = population_tree.seed_node.age / 100000
-        # tau_prior_a = 3.0
-        # tau_prior_b = tau_prior_mean * (tau_prior_a - 1)
-        theta_prior_a = 3.0
-        theta_prior_b = 0.02
-        tau_prior_a = 3.0
-        tau_prior_b = 0.02
 
+        # Inverse Gamma Prior
+        # IG(a,b), with mean given by b/(a-1)
+        # So,
+        #   thetaprior 3 0.002
+        # has a mean of
+        #   0.002/(3-1) = 0.001
+        optimized_theta_prior_mean = args.population_size * 4 * args.mutation_rate_per_site
+        optimized_theta_prior_a = 3.0
+        optimized_theta_prior_b = optimized_theta_prior_mean * (optimized_theta_prior_a - 1)
+        if args.no_scale_tree_by_mutation_rate:
+            optimized_tau_prior_mean = population_tree.seed_node.age
+        else:
+            optimized_tau_prior_mean = population_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
+            # optimized_tau_prior_mean = population_tree.seed_node.age * args.mutation_rate_per_site * (1.0 / (args.num_loci_per_individual * args.num_characters_per_locus))
+            # optimized_tau_prior_mean = population_tree.seed_node.age / 100000
+        optimized_tau_prior_a = 3.0
+        optimized_tau_prior_b = optimized_tau_prior_mean * (optimized_tau_prior_a - 1)
+
+        default_theta_prior_a = 3.0
+        default_theta_prior_b = 0.02
+        default_theta_prior_mean =  default_theta_prior_b / (default_theta_prior_a - 1)
+        default_tau_prior_a = 3.0
+        default_tau_prior_b = 0.02
+        default_tau_prior_mean =  default_tau_prior_b / (default_tau_prior_a - 1)
+
+        if args.is_use_informative_priors:
+            theta_prior_a = optimized_theta_prior_a
+            theta_prior_b = optimized_theta_prior_b
+            tau_prior_a = optimized_tau_prior_a
+            tau_prior_b = optimized_tau_prior_b
+        else:
+            theta_prior_a = default_theta_prior_a
+            theta_prior_b = default_theta_prior_b
+            tau_prior_a = default_tau_prior_a
+            tau_prior_b = default_tau_prior_b
         num_populations = len(population_tree.taxon_namespace)
         population_labels = " ".join(t.label for t in population_tree.taxon_namespace)
         num_individuals_per_population = " ".join(str(args.num_individuals_per_terminal_lineage) for i in range(len(population_tree.taxon_namespace)))
@@ -380,14 +406,27 @@ def main():
                 population_labels=population_labels,
                 num_individuals_per_population=num_individuals_per_population,
                 bpp_guide_tree=bpp_guide_tree,
-                # theta_prior_mean=theta_prior_mean,
                 theta_prior_a=theta_prior_a,
                 theta_prior_b=theta_prior_b,
-                # tau_prior_mean=tau_prior_mean,
                 tau_prior_a=tau_prior_a,
                 tau_prior_b=tau_prior_b,
                 num_loci=args.num_loci_per_individual,
-                # root_age=population_tree.seed_node.age
+                root_age=population_tree.seed_node.age,
+                population_size=args.population_size,
+                mutation_rate_per_site=args.mutation_rate_per_site,
+                num_loci_per_individual=args.num_loci_per_individual,
+                optimized_theta_prior_a=optimized_theta_prior_a,
+                optimized_theta_prior_b=optimized_theta_prior_b,
+                optimized_theta_prior_mean=optimized_theta_prior_mean,
+                default_theta_prior_a=default_theta_prior_a,
+                default_theta_prior_b=default_theta_prior_b,
+                default_theta_prior_mean=default_theta_prior_mean,
+                optimized_tau_prior_a=optimized_tau_prior_a,
+                optimized_tau_prior_b=optimized_tau_prior_b,
+                optimized_tau_prior_mean=optimized_tau_prior_mean,
+                default_tau_prior_a=default_tau_prior_a,
+                default_tau_prior_b=default_tau_prior_b,
+                default_tau_prior_mean=default_tau_prior_mean,
                 )
         bpp_ctl_filepath = "{}.input.bpp.ctl".format(job_title)
         f = open(bpp_ctl_filepath, "w")
