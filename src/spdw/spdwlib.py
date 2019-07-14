@@ -45,6 +45,76 @@ class ColorMap(object):
             self.color_label_map[new_color] = label
         return new_color
 
+class TableRowFormatter(object):
+
+    def __init__(self,
+            field_names,
+            field_lengths=None,
+            field_value_templates=None,
+            field_templates=None,
+            field_separator="  ",
+            ):
+        self.field_names = field_names
+        self.field_lengths = field_lengths
+        self.field_templates = field_templates
+        self.field_value_templates = field_value_templates
+        self.field_separator = field_separator
+
+    @property
+    def field_lengths(self):
+        if self._field_lengths is None:
+            self._field_lengths = [len(f) for f in self.field_names]
+        return self._field_lengths
+    @field_lengths.setter
+    def field_lengths(self, value):
+        self._field_lengths = value
+    @field_lengths.deleter
+    def field_lengths(self):
+        del self._field_lengths
+
+    @property
+    def field_templates(self):
+        if self._field_templates is None:
+            self._field_templates = []
+            for field_name_idx, field_name in enumerate(self.field_names):
+                field_template = "{{:{}}}".format(self.field_lengths[field_name_idx])
+                self._field_templates.append(field_template)
+        return self._field_templates
+    @field_templates.setter
+    def field_templates(self, value):
+        self._field_templates = value
+    @field_templates.deleter
+    def field_templates(self):
+        del self._field_templates
+
+    @property
+    def field_value_templates(self):
+        if self._field_value_templates is None:
+            self._field_value_templates = ["{}" for i in range(len(self.field_names))]
+        return self._field_value_templates
+    @field_value_templates.setter
+    def field_value_templates(self, value):
+        self._field_value_templates = value
+    @field_value_templates.deleter
+    def field_value_templates(self):
+        del self._field_value_templates
+
+    def format_header_row(self):
+        fields = []
+        for field_idx, field_name in enumerate(self.field_names):
+            fields.append(self.field_templates[field_idx].format(field_name))
+        return self.field_separator.join(fields)
+
+    def format_fields(self, field_values):
+        fields = []
+        for field_idx, field_value in enumerate(field_values):
+            formatted_field_value = self.field_value_templates[field_idx].format(field_value)
+            fields.append(self.field_templates[field_idx].format(formatted_field_value))
+        return fields
+
+    def format_row(self, field_values):
+        return self.field_separator.join(self.format_fields(field_values))
+
 class ProtractedSpeciationTreeGenerator(object):
 
     SPECIES_LABEL_FORMAT_TEMPLATE = "S{species_id}"

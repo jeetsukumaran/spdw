@@ -14,6 +14,8 @@ from dendropy.model import reconcile
 from dendropy.model import birthdeath
 from dendropy.interop import seqgen
 from dendropy.calculate import popgenstat
+from dendropy.utility import textprocessing
+from spdw import spdwlib
 import dendropy
 
 def _log(msg):
@@ -31,12 +33,25 @@ def _open_output_file_for_csv_writer(filepath, append=False):
     return out
 
 """
-Both parameters theta s and
-tau s in the MSC model are measured by genetic distance, the expected number of
-mutations/substitutions per site. For example, for the human species, theta H ~= 0.0006, which
+Some notes about the inverse-gamma distribution. Since BPP 3.4, both the θ and τ
+parameters are assigned the inverse gamma priors rather than the gamma priors in version 3.3
+or earlier. One difference is that the gamma is light-tailed while the inverse-gamma is heavy-
+tailed, so that the inverse-gamma may be less influential than the gamma if your prior mean
+is much too small. The inverse-gamma distribution IG( α , β ) has mean m = β /( α – 1) if α > 1
+and variance s 2 = β 2 /[( α – 1) 2 ( α – 2)] if α > 2, while the coefficient of variation is s/m =
+1 ( α − 2) . If little information is available about the parameters, you can use α = 3 for a
+diffuse prior and then adjust the β so that the mean looks reasonable. Both parameters θ s and
+τ s in the MSC model are measured by genetic distance, the expected number of
+mutations/substitutions per site. For example, for the human species, θ H ≈ 0.0006, which
 means that two random sequences from the human population are different at ~0.06% of
-sites, less than 1 difference per kb. A sensible diffuse prior is then ''thetaprior = 3 0.002''
+sites, less than 1 difference per kb. A sensible diffuse prior is then “ thetaprior = 3 0.002 ”,
 with mean 0.001.
+tauprior = 3 0.03 specifies the inverse-gamma prior IG( α , β ) for τ 0 , the divergence time
+parameter for the root in the species tree. Other divergence times are generated from the
+uniform Dirichlet distribution (Yang and Rannala, 2010: equation 2). In the example, the
+mean is 0.03/(3 – 1) = 0.015 (which means 1.5% of sequence divergence between the root of
+the species tree and the present time). If the mutation rate is 10 –9 mutations/site/year, this
+distance will translate to a human-orangutan divergence time of 15MY .
 """
 
 BPP_TEMPLATE = """\
@@ -321,21 +336,32 @@ def main():
             # f.write("{}    {}\n".format(taxon.label, taxon.population_label))
         f.write("\n")
 
+
+        field_names = ("Locus", "pi", "theta", "TajD",)
+        table_row_formatter = spdwlib.TableRowFormatter(
+                field_names=field_names,
+                field_lengths=[5] + [10] * 3,
+                field_value_templates = ["{}"] + ["{:10.8f}"] * 3,
+                field_separator = "    ",
+                )
         d0 = sg.generate(gene_trees)
         chars_filepath = "{}.input.chars.txt".format(job_title)
         f = open(chars_filepath, "w")
+        sys.stderr.write("{}\n".format(table_row_formatter.format_header_row()))
         for cm_idx, cm in enumerate(d0.char_matrices):
             try:
                 td = popgenstat.tajimas_d(cm)
             except ZeroDivisionError as e:
                 td = "N/A"
-            # td = 1
             wtheta = popgenstat.wattersons_theta(cm)
-            sys.stderr.write("Locus {}: pi = {}, Watterson's theta per site = {}, Tajima's D = {}\n".format(
-                cm_idx+1,
-                popgenstat.nucleotide_diversity(cm),
-                wtheta/args.num_characters_per_locus,
-                td))
+            profile = table_row_formatter.format_row(
+                field_values=[
+                    cm_idx+1,
+                    popgenstat.nucleotide_diversity(cm),
+                    wtheta/args.num_characters_per_locus,
+                    td,
+                ])
+            sys.stderr.write("{}\n".format(profile))
             cm.write(file=f, schema="phylip")
             f.write("\n")
 
@@ -354,17 +380,18 @@ def main():
         if args.no_scale_tree_by_mutation_rate:
             optimized_tau_prior_mean = population_tree.seed_node.age
         else:
-            optimized_tau_prior_mean = population_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
+            # optimized_tau_prior_mean = population_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
             # optimized_tau_prior_mean = population_tree.seed_node.age * args.mutation_rate_per_site * (1.0 / (args.num_loci_per_individual * args.num_characters_per_locus))
+            optimized_tau_prior_mean = population_tree.seed_node.age * args.population_size * args.mutation_rate_per_site
             # optimized_tau_prior_mean = population_tree.seed_node.age / 100000
         optimized_tau_prior_a = 3.0
         optimized_tau_prior_b = optimized_tau_prior_mean * (optimized_tau_prior_a - 1)
 
         default_theta_prior_a = 3.0
-        default_theta_prior_b = 0.02
+        default_theta_prior_b = 0.002
         default_theta_prior_mean =  default_theta_prior_b / (default_theta_prior_a - 1)
         default_tau_prior_a = 3.0
-        default_tau_prior_b = 0.02
+        default_tau_prior_b = 0.03
         default_tau_prior_mean =  default_tau_prior_b / (default_tau_prior_a - 1)
 
         if args.is_use_informative_priors:
