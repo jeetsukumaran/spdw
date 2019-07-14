@@ -195,7 +195,7 @@ def main():
     parser.add_argument("source_trees",
             metavar="SOURCE_TREEFILE [SOURCE_TREEFILE [SOURCE_TREEFILE]]",
             nargs="+",
-            help="Path to containing tree files. Specify '-' to read from standard input.")
+            help="Path to containing tree files. Specify '-' to read from standard input. Tree branch lengths should be in units of N. Specify '--population-size' to scale appropriately.")
     parser.add_argument("-f", "--input-format",
             default="nexus",
             dest="schema",
@@ -221,7 +221,7 @@ def main():
     data_options.add_argument("--population-size",
             type=float,
             default=1e6,
-            help="Population size [default: %(default)s].")
+            help="Population size [default: %(default)s]. Branch lengths will be scaled (multiplied) by this factor.")
     data_options.add_argument(
             "--min-subpopulation-lineages-per-population",
             type=int,
