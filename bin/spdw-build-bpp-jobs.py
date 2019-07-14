@@ -280,6 +280,11 @@ def main():
     sg = seqgen.SeqGen()
     sg.seq_len = args.num_characters_per_locus
     sg.scale_branch_lens = args.mutation_rate_per_site
+    input_sequences_d = {}
+    for idx in range(1):
+        input_sequences_d["t{}".format(idx+1)] = [rng.choice(["A","C","G","T"]) for x in range(sg.seq_len)]
+    input_sequences = dendropy.DnaCharacterMatrix.from_dict(input_sequences_d)
+    sg.ancestral_seq_idx = 1
 
     if "-" in args.source_trees:
         filepaths = sys.stdin.read().split("\n")
@@ -336,15 +341,25 @@ def main():
             # f.write("{}    {}\n".format(taxon.label, taxon.population_label))
         f.write("\n")
 
-
-        field_names = ("Locus", "pi", "theta", "TajD",)
+        field_names = (
+                "Locus",
+                "pi",
+                "theta",
+                "TajD",
+                "tau_mean",
+                "tau_max",
+                "tau_min",
+                )
         table_row_formatter = spdwlib.TableRowFormatter(
                 field_names=field_names,
-                field_lengths=[5] + [10] * 3,
-                field_value_templates = ["{}"] + ["{:10.8f}"] * 3,
+                field_lengths=[5] + [11] * 6,
+                field_value_templates = ["{}"] + ["{:<11.8f}"] * 6,
                 field_separator = "    ",
                 )
-        d0 = sg.generate(gene_trees)
+        d0 = sg.generate(
+                gene_trees,
+                input_sequences=input_sequences,
+                )
         chars_filepath = "{}.input.chars.txt".format(job_title)
         f = open(chars_filepath, "w")
         sys.stderr.write("{}\n".format(table_row_formatter.format_header_row()))
@@ -354,12 +369,25 @@ def main():
             except ZeroDivisionError as e:
                 td = "N/A"
             wtheta = popgenstat.wattersons_theta(cm)
+            anc_desc_thetas = []
+            for seq_idx, seq in enumerate(cm.values()):
+                pair_data = (input_sequences[0], seq)
+                num_segregating_sites = popgenstat._num_segregating_sites(
+                        char_sequences=pair_data,
+                        state_alphabet=cm.default_state_alphabet,
+                        ignore_uncertain=True)
+                a1 = sum([1.0/i for i in range(1, len(pair_data))])
+                anc_desc_theta = float(num_segregating_sites) / a1
+                anc_desc_thetas.append(anc_desc_theta/sg.seq_len)
             profile = table_row_formatter.format_row(
                 field_values=[
                     cm_idx+1,
                     popgenstat.nucleotide_diversity(cm),
                     wtheta/args.num_characters_per_locus,
                     td,
+                    sum(anc_desc_thetas)/len(anc_desc_thetas),
+                    max(anc_desc_thetas),
+                    min(anc_desc_thetas),
                 ])
             sys.stderr.write("{}\n".format(profile))
             cm.write(file=f, schema="phylip")
