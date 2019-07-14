@@ -151,31 +151,16 @@ class ProtractedSpeciationTreeGenerator(object):
             )
 
     def generate_sample(self,):
-        while True:
-            # make sure that the tree we generate has enough species
-            lineage_tree, orthospecies_tree = self.psm.generate_sample(
-                    max_time=self.max_time,
-                    num_extant_lineages=self.num_extant_lineages,
-                    min_extant_lineages=self.min_extant_lineages,
-                    max_extant_lineages=self.max_extant_lineages,
-                    num_extant_orthospecies=self.num_extant_orthospecies,
-                    min_extant_orthospecies=self.min_extant_orthospecies,
-                    max_extant_orthospecies=self.max_extant_orthospecies,
-                    )
-            if len(orthospecies_tree.taxon_namespace) >= self.min_extant_orthospecies:
-                ok = []
-                # if self.min_unconstrained_leaves:
-                #     if len(lineage_tree.taxon_namespace) >= self.min_unconstrained_leaves:
-                #         ok.append(True)
-                #     else:
-                #         ok.append(False)
-                if self.min_extant_lineages:
-                    if len(lineage_tree.taxon_namespace) >= self.min_extant_lineages:
-                        ok.append(True)
-                    else:
-                        ok.append(False)
-                if all(ok):
-                    break
+        # make sure that the tree we generate has enough species
+        lineage_tree, orthospecies_tree = self.psm.generate_sample(
+                max_time=self.max_time,
+                num_extant_lineages=self.num_extant_lineages,
+                min_extant_lineages=self.min_extant_lineages,
+                max_extant_lineages=self.max_extant_lineages,
+                num_extant_orthospecies=self.num_extant_orthospecies,
+                min_extant_orthospecies=self.min_extant_orthospecies,
+                max_extant_orthospecies=self.max_extant_orthospecies,
+                )
         return lineage_tree, orthospecies_tree
 
 def build_tree_label_maps(orthospecies_tree=None, lineage_tree=None):
