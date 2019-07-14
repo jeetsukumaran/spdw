@@ -81,13 +81,13 @@ BPP_TEMPLATE = """\
 
      cleandata = 0    * remove sites with ambiguity data (1:yes, 0:no)?
 
-    *  Optimized Priors:
-    *      thetaprior = {optimized_theta_prior_a} {optimized_theta_prior_b} * Mean = {optimized_theta_prior_mean}
-    *      tauprior = {optimized_tau_prior_a} {optimized_tau_prior_b} * Mean = {optimized_tau_prior_mean};
-    *      * Root age = {root_age}; N = {population_size}; mu = {mutation_rate_per_site};
-    *  Default Priors:
-    *      thetaprior = {default_theta_prior_a} {default_tau_prior_b}
-    *      tauprior = {default_tau_prior_a} {default_tau_prior_b}
+    *  - Root age = {root_age}; N = {population_size}; mu = {mutation_rate_per_site};
+    *  - Optimized Priors:
+    *      - thetaprior = {optimized_theta_prior_a} {optimized_theta_prior_b} * Mean = {optimized_theta_prior_mean}
+    *      - tauprior = {optimized_tau_prior_a} {optimized_tau_prior_b} * Mean = {optimized_tau_prior_mean};
+    *  - Default Priors:
+    *      - thetaprior = {default_theta_prior_a} {default_tau_prior_b}
+    *      - tauprior = {default_tau_prior_a} {default_tau_prior_b}
     thetaprior = {theta_prior_a} {theta_prior_b}
       tauprior = {tau_prior_a}   {tau_prior_b}
 
@@ -254,9 +254,6 @@ def main():
             # default=0.00001,
             default=1e-8,
             help="Per-site mutation rate [default: %(default)s].")
-    data_options.add_argument("--no-scale-tree-by-mutation-rate",
-            action="store_true",
-            help="Do not scale tree by mutation rate.")
     summary_options = parser.add_argument_group("Summary Options")
     summary_options.add_argument("-p", "--population-probability-threshold",
             action="store",
@@ -369,7 +366,9 @@ def main():
             except ZeroDivisionError as e:
                 td = "N/A"
             wtheta = popgenstat.wattersons_theta(cm)
-            anc_desc_thetas = []
+            root_tip_thetas = []
+            root_tip_max_thetas = []
+            root_tip_mean_thetas = []
             for seq_idx, seq in enumerate(cm.values()):
                 pair_data = (input_sequences[0], seq)
                 num_segregating_sites = popgenstat._num_segregating_sites(
@@ -377,17 +376,19 @@ def main():
                         state_alphabet=cm.default_state_alphabet,
                         ignore_uncertain=True)
                 a1 = sum([1.0/i for i in range(1, len(pair_data))])
-                anc_desc_theta = float(num_segregating_sites) / a1
-                anc_desc_thetas.append(anc_desc_theta/sg.seq_len)
+                root_tip_theta = float(num_segregating_sites) / a1
+                root_tip_thetas.append(root_tip_theta/sg.seq_len)
+            root_tip_max_thetas.append(max(root_tip_thetas))
+            root_tip_mean_thetas.append(sum(root_tip_thetas)/len(root_tip_thetas))
             profile = table_row_formatter.format_row(
                 field_values=[
                     cm_idx+1,
                     popgenstat.nucleotide_diversity(cm),
                     wtheta/args.num_characters_per_locus,
                     td,
-                    sum(anc_desc_thetas)/len(anc_desc_thetas),
-                    max(anc_desc_thetas),
-                    min(anc_desc_thetas),
+                    root_tip_mean_thetas[-1],
+                    root_tip_max_thetas[-1],
+                    min(root_tip_thetas),
                 ])
             sys.stderr.write("{}\n".format(profile))
             cm.write(file=f, schema="phylip")
@@ -405,13 +406,8 @@ def main():
         optimized_theta_prior_mean = args.population_size * 4 * args.mutation_rate_per_site
         optimized_theta_prior_a = 3.0
         optimized_theta_prior_b = optimized_theta_prior_mean * (optimized_theta_prior_a - 1)
-        if args.no_scale_tree_by_mutation_rate:
-            optimized_tau_prior_mean = population_tree.seed_node.age
-        else:
-            # optimized_tau_prior_mean = population_tree.seed_node.age * args.population_size * 4 * args.mutation_rate_per_site
-            # optimized_tau_prior_mean = population_tree.seed_node.age * args.mutation_rate_per_site * (1.0 / (args.num_loci_per_individual * args.num_characters_per_locus))
-            optimized_tau_prior_mean = population_tree.seed_node.age * args.population_size * args.mutation_rate_per_site
-            # optimized_tau_prior_mean = population_tree.seed_node.age / 100000
+
+        optimized_tau_prior_mean = sum(root_tip_mean_thetas) / len(root_tip_mean_thetas)
         optimized_tau_prior_a = 3.0
         optimized_tau_prior_b = optimized_tau_prior_mean * (optimized_tau_prior_a - 1)
 
