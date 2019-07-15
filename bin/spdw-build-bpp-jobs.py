@@ -254,6 +254,10 @@ def main():
             # default=0.00001,
             default=1e-8,
             help="Per-site mutation rate [default: %(default)s].")
+    parser.add_argument("--save-alignments",
+            action="store_true",
+            default=False,
+            help="Save alignment data.")
     summary_options = parser.add_argument_group("Summary Options")
     summary_options.add_argument("-p", "--population-probability-threshold",
             action="store",
@@ -401,6 +405,8 @@ def main():
                 ])
             sys.stderr.write("{}\n".format(profile))
             cm.write(file=f, schema="phylip")
+            if args.save_alignments:
+                cm.write(path="{}.locus-{:04d}.nex".format(job_title, cm_idx+1), schema="nexus")
             f.write("\n")
 
         out_filepath = "{}.results.out.txt".format(job_title)
