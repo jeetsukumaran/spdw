@@ -39,6 +39,7 @@ setup(
         "bin/spdw-gen-seqs.py",
         "bin/spdw-plotcoaltimes.py",
         "bin/spdw-plot-invgamma.py",
+        "bin/spdw-profile-bpp.py",
         "bin/spdw-sim-bdstruct-coaltrees.py",
         "bin/spdw-sim-bdtrees.py",
         "bin/spdw-sim-coaltrees.py",
