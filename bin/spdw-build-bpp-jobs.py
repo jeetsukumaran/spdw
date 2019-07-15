@@ -258,6 +258,10 @@ def main():
             action="store_true",
             default=False,
             help="Save alignment data.")
+    parser.add_argument("--save-locus-profile",
+            action="store_true",
+            default=False,
+            help="Save locus profile information.")
     summary_options = parser.add_argument_group("Summary Options")
     summary_options.add_argument("-p", "--population-probability-threshold",
             action="store",
@@ -363,10 +367,11 @@ def main():
                 )
         chars_filepath = "{}.input.chars.txt".format(job_title)
         f = open(chars_filepath, "w")
-        sys.stderr.write("{}\n".format(table_row_formatter.format_header_row()))
+        _log("{}".format(table_row_formatter.format_header_row()))
         locus_thetas = []
         root_tip_max_thetas = []
         root_tip_mean_thetas = []
+        locus_profile_info = []
         for cm_idx, cm in enumerate(d0.char_matrices):
             try:
                 td = popgenstat.tajimas_d(cm)
@@ -393,21 +398,31 @@ def main():
 
             root_tip_max_thetas.append(max(root_tip_thetas))
             root_tip_mean_thetas.append(sum(root_tip_thetas)/len(root_tip_thetas))
-            profile = table_row_formatter.format_row(
-                field_values=[
-                    cm_idx+1,
-                    nucleotide_diversity,
-                    locus_thetas[-1],
-                    td,
-                    root_tip_mean_thetas[-1],
-                    root_tip_max_thetas[-1],
-                    min(root_tip_thetas),
-                ])
-            sys.stderr.write("{}\n".format(profile))
+            field_values = [
+                cm_idx+1,
+                nucleotide_diversity,
+                locus_thetas[-1],
+                td,
+                root_tip_mean_thetas[-1],
+                root_tip_max_thetas[-1],
+                min(root_tip_thetas),
+            ]
+            assert len(field_values) == len(field_names)
+            profile = table_row_formatter.format_row(field_values=field_values)
+            _log("{}".format(profile))
+            locus_profile_info.append(dict(zip(field_names, field_values)))
             cm.write(file=f, schema="phylip")
             if args.save_alignments:
                 cm.write(path="{}.locus-{:04d}.nex".format(job_title, cm_idx+1), schema="nexus")
             f.write("\n")
+        if args.save_locus_profile:
+            with open("{}.locus-profile.tsv".format(job_title), "w") as locus_profile_f:
+                csv_writer = csv.DictWriter(
+                        locus_profile_f,
+                        delimiter="\t",
+                        fieldnames=field_names,)
+                csv_writer.writeheader()
+                csv_writer.writerows(locus_profile_info)
 
         out_filepath = "{}.results.out.txt".format(job_title)
         mcmc_filepath = "{}.results.mcmc.txt".format(job_title)
