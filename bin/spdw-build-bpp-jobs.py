@@ -86,7 +86,7 @@ BPP_TEMPLATE = """\
     *      - thetaprior = {optimized_theta_prior_a} {optimized_theta_prior_b} * Mean = {optimized_theta_prior_mean}
     *      - tauprior = {optimized_tau_prior_a} {optimized_tau_prior_b} * Mean = {optimized_tau_prior_mean};
     *  - Default Priors:
-    *      - thetaprior = {default_theta_prior_a} {default_tau_prior_b}
+    *      - thetaprior = {default_theta_prior_a} {default_theta_prior_b}
     *      - tauprior = {default_tau_prior_a} {default_tau_prior_b}
     thetaprior = {theta_prior_a} {theta_prior_b}
       tauprior = {tau_prior_a}   {tau_prior_b}
@@ -360,31 +360,40 @@ def main():
         chars_filepath = "{}.input.chars.txt".format(job_title)
         f = open(chars_filepath, "w")
         sys.stderr.write("{}\n".format(table_row_formatter.format_header_row()))
+        locus_thetas = []
+        root_tip_max_thetas = []
+        root_tip_mean_thetas = []
         for cm_idx, cm in enumerate(d0.char_matrices):
             try:
                 td = popgenstat.tajimas_d(cm)
             except ZeroDivisionError as e:
                 td = "N/A"
-            wtheta = popgenstat.wattersons_theta(cm)
             root_tip_thetas = []
-            root_tip_max_thetas = []
-            root_tip_mean_thetas = []
+            nucleotide_diversity = popgenstat.nucleotide_diversity(cm)
+            # locus_thetas.append(nucleotide_diversity)
+            wtheta = popgenstat.wattersons_theta(cm)
+            locus_thetas.append(wtheta)
             for seq_idx, seq in enumerate(cm.values()):
                 pair_data = (input_sequences[0], seq)
                 num_segregating_sites = popgenstat._num_segregating_sites(
                         char_sequences=pair_data,
                         state_alphabet=cm.default_state_alphabet,
                         ignore_uncertain=True)
+
                 a1 = sum([1.0/i for i in range(1, len(pair_data))])
                 root_tip_theta = float(num_segregating_sites) / a1
                 root_tip_thetas.append(root_tip_theta/sg.seq_len)
+
+                # root_tip_theta = num_segregating_sites / sg.seq_len
+                # root_tip_thetas.append(root_tip_theta)
+
             root_tip_max_thetas.append(max(root_tip_thetas))
             root_tip_mean_thetas.append(sum(root_tip_thetas)/len(root_tip_thetas))
             profile = table_row_formatter.format_row(
                 field_values=[
                     cm_idx+1,
-                    popgenstat.nucleotide_diversity(cm),
-                    wtheta/args.num_characters_per_locus,
+                    nucleotide_diversity,
+                    locus_thetas[-1],
                     td,
                     root_tip_mean_thetas[-1],
                     root_tip_max_thetas[-1],
@@ -403,7 +412,8 @@ def main():
         #   thetaprior 3 0.002
         # has a mean of
         #   0.002/(3-1) = 0.001
-        optimized_theta_prior_mean = args.population_size * 4 * args.mutation_rate_per_site
+        # optimized_theta_prior_mean = args.population_size * 4 * args.mutation_rate_per_site
+        optimized_theta_prior_mean = sum(locus_thetas) / len(locus_thetas)
         optimized_theta_prior_a = 3.0
         optimized_theta_prior_b = optimized_theta_prior_mean * (optimized_theta_prior_a - 1)
 
