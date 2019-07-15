@@ -371,7 +371,7 @@ def main():
             root_tip_thetas = []
             nucleotide_diversity = popgenstat.nucleotide_diversity(cm)
             # locus_thetas.append(nucleotide_diversity)
-            wtheta = popgenstat.wattersons_theta(cm)
+            wtheta = popgenstat.wattersons_theta(cm) / args.num_characters_per_locus
             locus_thetas.append(wtheta)
             for seq_idx, seq in enumerate(cm.values()):
                 pair_data = (input_sequences[0], seq)
