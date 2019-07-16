@@ -18,7 +18,7 @@ def main():
         control_file_contents = src.read()
     theta_prior_a = 3.0
     tau_prior_a = 3.0
-    job_files = []
+    submits = []
     job_root_dir = os.path.join(os.path.abspath(os.path.curdir), "analyses")
     os.makedirs(job_root_dir, exist_ok=True)
     seqfile_pattern =     re.compile(r"seqfile\s+=\s+(\S+)", re.MULTILINE | re.IGNORECASE)
@@ -43,15 +43,26 @@ def main():
             print(title)
             job_dir = os.path.join(job_root_dir, title)
             os.makedirs(job_dir, exist_ok=True)
-            job_control = control_file_contents
-            job_control = seqfile_pattern.sub(r"seqfile = {}/\g<1>".format(os.path.join(control_file_dir)), job_control)
-            job_control = imapfile_pattern.sub(r"Imapfile = {}/\g<1>".format(os.path.join(control_file_dir)), job_control)
-            job_control = theta_prior_pattern.sub(r"thetaprior = \g<1> {} * (mean = {})".format(theta_prior_b, theta_prior_mean), job_control)
-            job_control = tau_prior_pattern.sub(r"tauprior = \g<1> {} * (mean = {})".format(tau_prior_b, tau_prior_mean), job_control)
-            job_filename = os.path.join(job_dir, "bpp.ctl")
+            bpp_control = control_file_contents
+            bpp_control = seqfile_pattern.sub(r"seqfile = {}/\g<1>".format(os.path.join(control_file_dir)), bpp_control)
+            bpp_control = imapfile_pattern.sub(r"Imapfile = {}/\g<1>".format(os.path.join(control_file_dir)), bpp_control)
+            bpp_control = theta_prior_pattern.sub(r"thetaprior = \g<1> {} * (mean = {})".format(theta_prior_b, theta_prior_mean), bpp_control)
+            bpp_control = tau_prior_pattern.sub(r"tauprior = \g<1> {} * (mean = {})".format(tau_prior_b, tau_prior_mean), bpp_control)
+            bpp_filename = os.path.join(job_dir, "bpp.ctl")
+            with open(bpp_filename, "w") as dest:
+                dest.write(bpp_control)
+            job_filename = os.path.join(job_dir, "{}.job".format(title))
             with open(job_filename, "w") as dest:
-                dest.write(job_control)
-            sys.exit()
+                dest.write("#! /bin/bash\n\n")
+                # dest.write("cd ${PBS_O_WORKDIR:-$PWD}\n")
+                dest.write("cd {}".format(job_dir))
+                dest.write("bpp -c {}\n".format(bpp_filename))
+            submits.append((job_dir, job_filename))
+    with open("submit.sh", "w") as dest:
+        dest.write("#! /bin/bash\n\n")
+        dest.write("set -e -o pipefail\n\n")
+        for submit_dir, submit_filepath in submits:
+            dest.write("cd {} && qsub {} && cd -\n".format(submit_dir, submit_filepath))
 
 if __name__ == "__main__":
     main()
