@@ -55,7 +55,7 @@ def main():
             with open(job_filename, "w") as dest:
                 dest.write("#! /bin/bash\n\n")
                 # dest.write("cd ${PBS_O_WORKDIR:-$PWD}\n")
-                dest.write("cd {}".format(job_dir))
+                dest.write("cd {}\n".format(job_dir))
                 dest.write("bpp -c {}\n".format(bpp_filename))
             submits.append((job_dir, job_filename))
     with open("submit.sh", "w") as dest:
