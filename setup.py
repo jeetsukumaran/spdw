@@ -27,6 +27,7 @@ setup(
     packages=find_packages("src"),
     package_dir={"": "src"},
     scripts=[
+        "bin/spdw-bpp-analysis-profile.py",
         "bin/spdw-bpp-create-analyses.py",
         "bin/spdw-bpp-explore-priors.py",
         "bin/spdw-bpp-extract-a10-tree.py",
@@ -39,7 +40,6 @@ setup(
         "bin/spdw-gen-seqs.py",
         "bin/spdw-plotcoaltimes.py",
         "bin/spdw-plot-invgamma.py",
-        "bin/spdw-profile-bpp.py",
         "bin/spdw-sim-bdcoal-trees.py",
         "bin/spdw-sim-bd-trees.py",
         "bin/spdw-sim-coal-trees.py",
