@@ -108,7 +108,10 @@ class TableRowFormatter(object):
     def format_fields(self, field_values):
         fields = []
         for field_idx, field_value in enumerate(field_values):
-            formatted_field_value = self.field_value_templates[field_idx].format(field_value)
+            try:
+                formatted_field_value = self.field_value_templates[field_idx].format(field_value)
+            except ValueError:
+                formatted_field_value = str(field_value)
             fields.append(self.field_templates[field_idx].format(formatted_field_value))
         return fields
 
