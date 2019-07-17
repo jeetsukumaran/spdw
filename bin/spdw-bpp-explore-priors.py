@@ -48,8 +48,8 @@ def main():
             bpp_control = control_file_contents
             bpp_control = seqfile_pattern.sub(r"seqfile = {}/\g<1>".format(os.path.join(control_file_dir)), bpp_control)
             bpp_control = imapfile_pattern.sub(r"Imapfile = {}/\g<1>".format(os.path.join(control_file_dir)), bpp_control)
-            bpp_control = outfile_pattern.sub(r"outfile = {}.out.txt".format(title, bpp_control)
-            bpp_control = mcmcfile_pattern.sub(r"mcmcfile = {}.mcmc.txt".format(title, bpp_control)
+            bpp_control = outfile_pattern.sub(r"outfile = {}.out.txt".format(title, bpp_control))
+            bpp_control = mcmcfile_pattern.sub(r"mcmcfile = {}.mcmc.txt".format(title, bpp_control))
             bpp_control = theta_prior_pattern.sub(r"thetaprior = \g<1> {} * (mean = {})".format(theta_prior_b, theta_prior_mean), bpp_control)
             bpp_control = tau_prior_pattern.sub(r"tauprior = \g<1> {} * (mean = {})".format(tau_prior_b, tau_prior_mean), bpp_control)
             bpp_filename = os.path.join(job_dir, "bpp.ctl")
