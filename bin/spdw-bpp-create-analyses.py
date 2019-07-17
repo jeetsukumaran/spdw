@@ -351,14 +351,16 @@ def main():
                 "pi",
                 "theta",
                 "TajD",
-                "tau_mean",
-                "tau_max",
-                "tau_min",
+                "r0_mean",
+                "r0_max",
+                "r0_min",
                 )
+        max_field_name_len = max(len(f) for f in field_names)
+        max_field_len = max(11, max_field_name_len)
         table_row_formatter = spdwlib.TableRowFormatter(
                 field_names=field_names,
-                field_lengths=[5] + [11] * 6,
-                field_value_templates = ["{}"] + ["{:<11.8f}"] * 6,
+                field_lengths=[5] + [max_field_len] * (len(field_names)-1),
+                field_value_templates = ["{}"] + ["{{:<{}.8f}}".format(max_field_len)] * (len(field_names)-1),
                 field_separator = "    ",
                 )
         d0 = sg.generate(
