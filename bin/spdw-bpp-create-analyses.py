@@ -351,9 +351,9 @@ def main():
                 "pi",
                 "theta",
                 "TajD",
-                "r0_mean",
-                "r0_max",
-                "r0_min",
+                "tau_mean",
+                "tau_max",
+                "tau_min",
                 )
         max_field_name_len = max(len(f) for f in field_names)
         max_field_len = max(11, max_field_name_len)
