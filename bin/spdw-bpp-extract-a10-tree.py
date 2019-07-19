@@ -16,11 +16,11 @@ def extract_bpp_output_posterior_guide_tree_string(source_text):
     # pretty dumb logic for now: just locates the last non-blank line
     # works with: bp&p Version 3.1, April 2015, in "11" mode, i.e. infer tree and species delimitaiton
     lines = source_text.split("\n")
-    for line in lines[-1:0:-1]:
+    for idx, line in enumerate(lines[-1::-1]):
         if line:
             break
     if not line:
-        raise dendropy.DataError
+        raise dendropy.DataParseError
     return line
 
 def calculate_bpp_full_species_tree(
@@ -142,9 +142,8 @@ def main():
     args = parser.parse_args()
     with open(args.bpp_results_path) as src:
         bpp_out = src.read()
-    guide_tree = dendropy.Tree.get(path=args.guide_tree_path, schema="nexus")
-
     posterior_guide_tree_string = extract_bpp_output_posterior_guide_tree_string(bpp_out)
+    guide_tree = dendropy.Tree.get(path=args.guide_tree_path, schema="nexus")
     guide_tree, relabeled_tree = calculate_bpp_full_species_tree(
             src_tree_string=posterior_guide_tree_string,
             guide_tree=guide_tree,
