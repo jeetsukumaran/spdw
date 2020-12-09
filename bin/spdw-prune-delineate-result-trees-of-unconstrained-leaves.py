@@ -65,9 +65,9 @@ def main():
     supplemental_blocks = dataset.annotations["ignored_nexus_blocks"].value
     for nd in trees[0].leaf_node_iter():
         if filter_fn(nd):
-            nd.annotations["known_species_label"] = "?"
-        else:
             nd.annotations["known_species_label"] = nd.annotations["species"].value
+        else:
+            nd.annotations["known_species_label"] = "?"
         try:
             nd.annotations["population_label_without_species"] = nd.annotations["population_id"].value.split(".")[1]
         except IndexError:
