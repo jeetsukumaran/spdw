@@ -441,8 +441,8 @@ def main():
         optimized_theta_prior_b = optimized_theta_prior_mean * (optimized_theta_prior_a - 1)
 
         optimized_tau_prior_mean = sum(root_tip_mean_thetas) / len(root_tip_mean_thetas)
-        optimized_tau_prior_a = 3.0
-        optimized_tau_prior_b = optimized_tau_prior_mean * (optimized_tau_prior_a - 1)
+        optimized_tau_prior_a = 12.0
+        optimized_tau_prior_b = (optimized_tau_prior_mean * 1e-4) * (optimized_tau_prior_a - 1)
 
         default_theta_prior_a = 3.0
         default_theta_prior_b = 0.002

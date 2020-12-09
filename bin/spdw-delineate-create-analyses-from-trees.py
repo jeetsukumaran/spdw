@@ -107,7 +107,7 @@ def main():
 
     terminal_population_clades, lineage_population_clade_map = spdwlib.find_terminal_population_clades(lineage_tree)
     terminal_population_clade_species_identities = spdwlib.identify_terminal_population_clade_species(terminal_population_clades)
-    if args.constrain_partitions is "user":
+    if args.constrain_partitions == "user":
         raise NotImplementedError()
     else:
         constraints = spdwlib.generate_constraints_from_collapsed_tree(
