@@ -49,6 +49,7 @@ def main():
     parser.add_argument(
             "--max-trees",
             action="store",
+            type=int,
             default=None,
             help="Restrict processing to this number of trees.")
     parser.add_argument(
@@ -73,18 +74,9 @@ def main():
             path=args.output_prefix + ".suppressed-labels.nex",
             schema="nexus",
             supplemental_blocks=supplemental_blocks)
-    # trees = dendropy.TreeList.get(path=src, schema="nexus", store_ignored_blocks=True)
-    new_tree_list = dendropy.TreeList(taxon_namespace=trees.taxon_namespace)
     for tidx, tree in enumerate(trees):
-        # for leaf in tree.leaf_node_iter():
-        #     print(leaf.annotations["status"].value)
-        #     print(leaf.annotations["constrained"].value)
         filtered = tree.filter_leaf_nodes(filter_fn=filter_fn)
-        # sys.stderr.write("Filtered: {}\n".format(filtered))
-        new_tree_list.append(tree)
-        if args.max_trees and idx >= args.max_trees:
-            break
-    new_tree_list.write(
+    trees.write(
             path=args.output_prefix + ".induced-trees.nex",
             schema="nexus",
             translate_tree_taxa=True,
