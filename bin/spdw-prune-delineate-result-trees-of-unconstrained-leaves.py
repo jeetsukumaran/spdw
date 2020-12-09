@@ -67,17 +67,31 @@ def main():
         if filter_fn(nd):
             nd.annotations["known_species_label"] = "?"
         else:
-            nd.annotations["known_species_label"] = nd.annotations["species"]
+            nd.annotations["known_species_label"] = nd.annotations["species"].value
+        try:
+            nd.annotations["population_label_without_species"] = nd.annotations["population_id"].value.split(".")[1]
+        except IndexError:
+            pass
     if args.max_trees:
         trees = trees[:args.max_trees]
     trees.write(
             path=args.output_prefix + ".suppressed-labels.nex",
             schema="nexus",
             supplemental_blocks=supplemental_blocks)
+    new_tree_list = dendropy.TreeList(taxon_namespace=trees.taxon_namespace)
     for tidx, tree in enumerate(trees):
-        filtered = tree.filter_leaf_nodes(filter_fn=filter_fn)
+        new_tree_list.append(tree)
+        tree2 = dendropy.Tree(tree)
+        filtered = tree2.filter_leaf_nodes(filter_fn=filter_fn)
+        new_tree_list.append(tree2)
     trees.write(
             path=args.output_prefix + ".induced-trees.nex",
+            schema="nexus",
+            translate_tree_taxa=True,
+            supplemental_blocks=supplemental_blocks,
+            )
+    new_tree_list.write(
+            path=args.output_prefix + ".combined.nex",
             schema="nexus",
             translate_tree_taxa=True,
             supplemental_blocks=supplemental_blocks,

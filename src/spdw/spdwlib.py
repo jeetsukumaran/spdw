@@ -275,6 +275,8 @@ def find_terminal_population_clades(tree):
     for gnd in tree.preorder_node_iter():
         if gnd.parent_node is not None and gnd.parent_node.annotations["is_collapsed"].value:
             gnd.annotations["is_collapsed"] = True
+        else:
+            gnd.annotations["is_collapsed"] = False
     # identify the lowest nodes (closest to the tips) that are open, and
     # add its children if the children are (a) leaves; or (b) themselves
     # are closed
