@@ -75,7 +75,7 @@ def main():
     parser.add_argument("-F", "--output-format",
             type=str,
             default="bpp",
-            choices=["bpp", "nexus", "phylip"],
+            choices=["bpp", "nexus", "phylip", "fasta"],
             help="Input data format (default='%(default)s')")
     parser.add_argument("--concatenate",
             action="store_true",
@@ -120,6 +120,9 @@ def main():
         elif args.output_format == "phylip":
             chars_filepath += ".phylip"
             d0.write(path=chars_filepath, schema="phylip")
+        elif args.output_format == "fasta":
+            chars_filepath += ".fasta"
+            d0.write(path=chars_filepath, schema="fasta")
         elif args.output_format == "bpp":
             chars_filepath += ".txt"
             f = open(chars_filepath, "w")
